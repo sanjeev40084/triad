@@ -1,970 +1,1345 @@
 <!DOCTYPE html>
 <html lang="en" class="dark">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Triad — Focus & Task Manager</title>
-    
-    <!-- PWA & Mobile Meta Tags -->
-    <meta name="theme-color" content="#0F1117">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Triad">
-    <link rel="manifest" href="data:application/manifest+json;charset=utf-8,%7B%22name%22%3A%22Triad%22%2C%22short_name%22%3A%22Triad%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%230F1117%22%2C%22theme_color%22%3A%22%230F1117%22%2C%22icons%22%3A%5B%5D%7D">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Triad — Focus on 3</title>
 
-    <!-- Fonts: Plus Jakarta Sans -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Android & iOS PWA Meta Tags -->
+  <meta name="theme-color" content="#0F1117" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Triad" />
 
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
-                    },
-                }
-            }
-        }
-    </script>
+  <!-- Inline App Icon & Manifest for GitHub Pages PWA Install -->
+  <link rel="apple-touch-icon" href="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='112' fill='%230F1117'/%3E%3Crect x='128' y='156' width='56' height='200' rx='28' fill='%23F43F5E'/%3E%3Crect x='228' y='156' width='56' height='200' rx='28' fill='%2310B981'/%3E%3Crect x='328' y='156' width='56' height='200' rx='28' fill='%23F59E0B'/%3E%3C/svg%3E" />
+  <link rel="manifest" id="pwa-manifest" />
 
-    <!-- React 18 & ReactDOM & Babel -->
-    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- Modern Geometric Font: Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet" />
 
-    <style>
-        body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            background-color: #0F1117;
-            color: #F8FAFC;
-            touch-action: manipulation;
-            -webkit-tap-highlight-color: transparent;
-        }
-        .touch-dragging {
-            touch-action: none !important;
-            user-select: none;
-            -webkit-user-select: none;
-        }
-        /* Custom smooth scrollbar */
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.02);
-        }
-        ::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 9999px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 255, 255, 0.2);
-        }
-    </style>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- React & Babel Standalone -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: #07080B;
+      color: #F4F4F5;
+      margin: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .no-callout {
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+  </style>
 </head>
-<body class="bg-[#0F1117] text-slate-100 antialiased min-h-screen selection:bg-indigo-500 selection:text-white">
-    <div id="root"></div>
+<body class="antialiased selection:bg-rose-500/30 selection:text-rose-200">
+  <div id="root"></div>
 
-    <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
+  <!-- Dynamic Manifest Registration -->
+  <script>
+    (function () {
+      const iconUrl =
+        "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='112' fill='%230F1117'/%3E%3Crect x='128' y='156' width='56' height='200' rx='28' fill='%23F43F5E'/%3E%3Crect x='228' y='156' width='56' height='200' rx='28' fill='%2310B981'/%3E%3Crect x='328' y='156' width='56' height='200' rx='28' fill='%23F59E0B'/%3E%3C/svg%3E";
+      const manifest = {
+        name: 'Triad Focus',
+        short_name: 'Triad',
+        start_url: './',
+        scope: './',
+        display: 'standalone',
+        background_color: '#0F1117',
+        theme_color: '#0F1117',
+        icons: [
+          {
+            src: iconUrl,
+            sizes: '512x512',
+            type: 'image/svg+xml',
+            purpose: 'any maskable',
+          },
+        ],
+      };
+      const blob = new Blob([JSON.stringify(manifest)], {
+        type: 'application/manifest+json',
+      });
+      document
+        .getElementById('pwa-manifest')
+        .setAttribute('href', URL.createObjectURL(blob));
+    })();
+  </script>
 
-        const STORAGE_KEY = 'triad_tasks_v2';
-        const GIST_TOKEN_KEY = 'triad_gist_token_v2';
-        const GIST_ID_KEY = 'triad_gist_id_v2';
+  <!-- Triad Application Code -->
+  <script type="text/babel">
+    const { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback } = React;
 
-        const INITIAL_TASKS = [
-            { id: '1', title: 'Review quarterly DevOps infrastructure deployment pipeline', category: 'work', status: 'focus', order: 0, updatedAt: Date.now() - 3600000 },
-            { id: '2', title: 'Finalize Dataverse custom AI prompt builder templates', category: 'work', status: 'focus', order: 1, updatedAt: Date.now() - 3500000 },
-            { id: '3', title: 'Organize garage storage and test lawn watering system zones', category: 'personal', status: 'focus', order: 2, updatedAt: Date.now() - 3400000 },
-            { id: '4', title: 'Prepare team code documentation and PAC CLI standard operating procedures', category: 'work', status: 'queue', order: 0, updatedAt: Date.now() - 3300000 },
-            { id: '5', title: 'Schedule indoor houseplant repotting session for rubber plant and ZZ plant', category: 'personal', status: 'queue', order: 1, updatedAt: Date.now() - 3200000 },
-            { id: '6', title: 'Update GitHub repository secrets and Azure managed identity certificates', category: 'work', status: 'queue', order: 2, updatedAt: Date.now() - 3100000 },
-        ];
+    const Icon = {
+      Check: ({ className = 'w-4 h-4' }) => (
+        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+      ),
+      Plus: ({ className = 'w-5 h-5' }) => (
+        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.75" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+      ),
+      Lock: ({ className = 'w-3 h-3' }) => (
+        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+      ),
+      X: ({ className = 'w-4 h-4' }) => (
+        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+      ),
+      RotateCcw: ({ className = 'w-3 h-3' }) => (
+        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10" /><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" /></svg>
+      ),
+      CornerUpLeft: ({ className = 'w-4 h-4' }) => (
+        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 14 4 9 9 4" /><path d="M20 20v-7a4 4 0 0 0-4-4H4" /></svg>
+      ),
+      ChevronDown: ({ className = 'w-3.5 h-3.5' }) => (
+        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
+      ),
+      ChevronUp: ({ className = 'w-3.5 h-3.5' }) => (
+        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15" /></svg>
+      ),
+      GripVertical: ({ className = 'w-4 h-4' }) => (
+        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="12" r="1" /><circle cx="9" cy="5" r="1" /><circle cx="9" cy="19" r="1" /><circle cx="15" cy="12" r="1" /><circle cx="15" cy="5" r="1" /><circle cx="15" cy="19" r="1" /></svg>
+      ),
+      ArrowRight: ({ className = 'w-3.5 h-3.5' }) => (
+        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
+      ),
+      Briefcase: ({ className = 'w-4 h-4' }) => (
+        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2" /><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" /></svg>
+      ),
+      Sparkles: ({ className = 'w-4 h-4' }) => (
+        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z" /></svg>
+      ),
+      Moon: ({ className = 'w-3.5 h-3.5' }) => (
+        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" /></svg>
+      ),
+      Cloud: ({ className = 'w-3.5 h-3.5' }) => (
+        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z" /></svg>
+      ),
+      RefreshCw: ({ className = 'w-3.5 h-3.5' }) => (
+        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" /><path d="M8 16H3v5" /></svg>
+      ),
+      Pause: ({ className = 'w-3.5 h-3.5' }) => (
+        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round"><rect x="6" y="4" width="4" height="16" /><rect x="14" y="4" width="4" height="16" /></svg>
+      ),
+      Play: ({ className = 'w-3.5 h-3.5' }) => (
+        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3" /></svg>
+      ),
+      Edit2: ({ className = 'w-3.5 h-3.5' }) => (
+        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" /></svg>
+      ),
+    };
 
-        function App() {
-            const [tasks, setTasks] = useState(() => {
-                const saved = localStorage.getItem(STORAGE_KEY);
-                if (saved) {
-                    try { return JSON.parse(saved); } catch (e) { console.error(e); }
+    const STORAGE_KEY = 'triad_sunlit_tasks_v4';
+    const SYNC_CONFIG_KEY = 'triad_gist_sync_v2';
+    const GIST_FILENAME = 'triad-tasks-v2.json';
+
+    const INITIAL_TASKS = [
+      { id: 'triad-1', title: 'Finalize Q4 product roadmap deck', category: 'Work', status: 'active', updatedAt: Date.now() - 3600000 * 5, completedAt: null },
+      { id: 'triad-2', title: 'Book annual dental & vision checkups', category: 'Personal', status: 'active', updatedAt: Date.now() - 3600000 * 4, completedAt: null },
+      { id: 'triad-3', title: 'Review design system token PR', category: 'Work', status: 'backlog', updatedAt: Date.now() - 3600000 * 3, completedAt: null },
+      { id: 'triad-4', title: 'Pick up espresso beans & sourdough', category: 'Personal', status: 'backlog', updatedAt: Date.now() - 3600000 * 2, completedAt: null },
+      { id: 'triad-5', title: 'Draft Friday engineering all-hands notes', category: 'Work', status: 'backlog', updatedAt: Date.now() - 3600000 * 1, completedAt: null },
+    ];
+
+    const generateId = () => typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `task-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    const formatHeaderDate = () => {
+      try { return new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'short', day: 'numeric' }).format(new Date()).toUpperCase(); } catch { return 'TODAY'; }
+    };
+
+    const PlayfulSlotMeter = ({ activeTasks, isLocked, isShaking }) => {
+      const activeCount = activeTasks.length;
+      return (
+        <div className={`inline-flex items-center gap-2.5 px-3.5 py-2 rounded-2xl border transition-all duration-300 ${isLocked ? 'bg-amber-500/15 border-amber-400/40 text-amber-200 shadow-[0_0_18px_rgba(251,191,36,0.16)]' : 'bg-zinc-900/90 border-zinc-800 text-zinc-100 shadow-[0_4px_12px_rgba(0,0,0,0.3)]'} ${isShaking ? 'scale-105 ring-2 ring-amber-400/70' : ''}`} aria-label={`Focus capacity: ${activeCount} of 3 slots active`}>
+          <div className="flex items-center gap-1.5" aria-hidden="true">
+            {[0, 1, 2].map((idx) => {
+              const task = activeTasks[idx];
+              let pillClass = 'w-2.5 h-5 rounded-full bg-zinc-800';
+              if (task) {
+                if (isLocked) pillClass = 'w-3 h-5 rounded-full bg-gradient-to-b from-amber-300 to-orange-500 shadow-[0_0_10px_rgba(251,191,36,0.45)]';
+                else if (task.category === 'Work') pillClass = 'w-3 h-5 rounded-full bg-gradient-to-b from-rose-400 to-orange-500 shadow-[0_0_10px_rgba(244,63,94,0.45)]';
+                else pillClass = 'w-3 h-5 rounded-full bg-gradient-to-b from-emerald-300 to-teal-500 shadow-[0_0_10px_rgba(16,185,129,0.45)]';
+              }
+              return <span key={idx} className={`${pillClass} transition-all duration-300`} />;
+            })}
+          </div>
+          <div className="flex flex-col leading-none">
+            <span className="text-xs font-extrabold tabular-nums tracking-tight">{activeCount}/3 {isLocked ? 'Full' : 'Active'}</span>
+            <span className="text-[10px] font-semibold text-zinc-400 mt-0.5">{isLocked ? 'Finish 1 first' : `${3 - activeCount} open`}</span>
+          </div>
+        </div>
+      );
+    };
+
+    const CategoryBadge = ({ category }) => {
+      const isWork = category === 'Work';
+      return (
+        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold tracking-tight ${isWork ? 'bg-rose-500/15 text-rose-300 border border-rose-500/25' : 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/25'}`}>
+          <span className={`w-1.5 h-1.5 rounded-full ${isWork ? 'bg-rose-400' : 'bg-emerald-400'}`} aria-hidden="true" />
+          <span>{category}</span>
+        </span>
+      );
+    };
+
+    function App() {
+      const [tasks, setTasks] = useState(() => {
+        try {
+          const saved = window.localStorage.getItem(STORAGE_KEY);
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed)) return parsed;
+          }
+        } catch (err) { console.error(err); }
+        return INITIAL_TASKS;
+      });
+
+      const [deletedIds, setDeletedIds] = useState(() => {
+        try {
+          const saved = window.localStorage.getItem(STORAGE_KEY + '_deleted');
+          if (saved) return JSON.parse(saved);
+        } catch {}
+        return [];
+      });
+
+      const [syncConfig, setSyncConfig] = useState(() => {
+        try {
+          const saved = window.localStorage.getItem(SYNC_CONFIG_KEY);
+          if (saved) return JSON.parse(saved);
+        } catch {}
+        return { token: '', gistId: '' };
+      });
+      const [syncStatus, setSyncStatus] = useState('idle');
+      const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
+      const [tokenInput, setTokenInput] = useState(syncConfig.token || '');
+      const [gistIdInput, setGistIdInput] = useState(syncConfig.gistId || '');
+
+      const isConfigured = Boolean(syncConfig.token && syncConfig.gistId);
+      const skipNextPushRef = useRef(false);
+
+      const [filter, setFilter] = useState('All');
+      const [isSheetOpen, setIsSheetOpen] = useState(false);
+      const [newTitle, setNewTitle] = useState('');
+      const [newCategory, setNewCategory] = useState('Work');
+      const [isCompletedOpen, setIsCompletedOpen] = useState(false);
+      const [isWaitingOpen, setIsWaitingOpen] = useState(false);
+      const [completingId, setCompletingId] = useState(null);
+      const [toast, setToast] = useState('');
+      const [shakeMeter, setShakeMeter] = useState(false);
+      const [dragState, setDragState] = useState(null);
+
+      // Inline Editing state
+      const [editingId, setEditingId] = useState(null);
+      const [editingTitle, setEditingTitle] = useState('');
+
+      const titleInputRef = useRef(null);
+      const editInputRef = useRef(null);
+      const holdTimerRef = useRef(null);
+      const dragMetaRef = useRef(null);
+      const pendingAnchorAdjustRef = useRef(null);
+      const cardElsRef = useRef(new Map());
+      const formattedDate = useMemo(() => formatHeaderDate(), []);
+
+      useLayoutEffect(() => {
+        const pending = pendingAnchorAdjustRef.current;
+        if (!pending) return;
+        pendingAnchorAdjustRef.current = null;
+        const meta = dragMetaRef.current;
+        const el = cardElsRef.current.get(pending.id);
+        if (meta && meta.isDragging && meta.id === pending.id && el) {
+          el.style.transform = 'none';
+          const newNaturalTop = el.getBoundingClientRect().top;
+          meta.anchorY += newNaturalTop - pending.prevNaturalTop;
+          const dy = pending.clientY - meta.anchorY;
+          el.style.transform = `translate3d(0, ${dy}px, 0) scale(1.02)`;
+        }
+      }, [tasks]);
+
+      const registerCardEl = useCallback((id, el) => {
+        if (el) cardElsRef.current.set(id, el);
+        else cardElsRef.current.delete(id);
+      }, []);
+
+      const triggerToast = useCallback((message) => { setToast(message); }, []);
+
+      const reorderItems = useCallback((sourceId, targetId) => {
+        if (!sourceId || !targetId || sourceId === targetId) return;
+        setTasks((prev) => {
+          const fromIdx = prev.findIndex((t) => t.id === sourceId);
+          const toIdx = prev.findIndex((t) => t.id === targetId);
+          if (fromIdx === -1 || toIdx === -1) return prev;
+          const next = [...prev];
+          const [moved] = next.splice(fromIdx, 1);
+          next.splice(toIdx, 0, moved);
+          return next.map(t => t.id === moved.id ? { ...t, updatedAt: Date.now() } : t);
+        });
+      }, []);
+
+      const activateDrag = useCallback((task, section, startY) => {
+        if (!dragMetaRef.current || dragMetaRef.current.id !== task.id) return;
+        dragMetaRef.current.isDragging = true;
+        dragMetaRef.current.anchorY = startY;
+        document.body.style.overflow = 'hidden';
+        document.body.style.touchAction = 'none';
+        if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(20);
+        setDragState({ id: task.id, section });
+      }, []);
+
+      const handleCardPointerDown = (e, task, section, immediate = false) => {
+        if (e.button !== undefined && e.button !== 0) return;
+        if (!immediate && (e.target.closest('button') || e.target.closest('input'))) return;
+        if (immediate) e.stopPropagation();
+
+        const startX = e.clientX;
+        const startY = e.clientY;
+        if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
+
+        dragMetaRef.current = { id: task.id, section, startX, startY, anchorY: startY, isDragging: false };
+        if (immediate) activateDrag(task, section, startY);
+        else holdTimerRef.current = setTimeout(() => activateDrag(task, section, startY), 160);
+      };
+
+      useEffect(() => {
+        const updateDragPosition = (clientY) => {
+          const meta = dragMetaRef.current;
+          if (!meta || !meta.isDragging || pendingAnchorAdjustRef.current) return;
+          const activeEl = cardElsRef.current.get(meta.id);
+          if (!activeEl) return;
+
+          const dy = clientY - meta.anchorY;
+          activeEl.style.transform = `translate3d(0, ${dy}px, 0) scale(1.02)`;
+
+          const siblings = [];
+          cardElsRef.current.forEach((el, id) => {
+            if (el.dataset.dragSection === meta.section) {
+              const rect = el.getBoundingClientRect();
+              const naturalTop = id === meta.id ? rect.top - dy : rect.top;
+              siblings.push({ id, el, naturalTop, midY: naturalTop + rect.height / 2 });
+            }
+          });
+          siblings.sort((a, b) => a.naturalTop - b.naturalTop);
+
+          const currentIdx = siblings.findIndex((s) => s.id === meta.id);
+          if (currentIdx === -1) return;
+          const currentNaturalTop = siblings[currentIdx].naturalTop;
+
+          if (currentIdx > 0 && clientY < siblings[currentIdx - 1].midY) {
+            const target = siblings[currentIdx - 1];
+            pendingAnchorAdjustRef.current = { id: meta.id, prevNaturalTop: currentNaturalTop, clientY };
+            reorderItems(meta.id, target.id);
+          } else if (currentIdx < siblings.length - 1 && clientY > siblings[currentIdx + 1].midY) {
+            const target = siblings[currentIdx + 1];
+            pendingAnchorAdjustRef.current = { id: meta.id, prevNaturalTop: currentNaturalTop, clientY };
+            reorderItems(meta.id, target.id);
+          }
+        };
+
+        const handleWindowPointerMove = (e) => {
+          const meta = dragMetaRef.current;
+          if (!meta) return;
+          if (!meta.isDragging) {
+            if (Math.abs(e.clientY - meta.startY) > 10 || Math.abs(e.clientX - meta.startX) > 10) {
+              clearTimeout(holdTimerRef.current);
+              dragMetaRef.current = null;
+            }
+            return;
+          }
+          if (e.cancelable) e.preventDefault();
+          updateDragPosition(e.clientY);
+        };
+
+        const handleWindowTouchMove = (e) => {
+          const meta = dragMetaRef.current;
+          if (!meta || !meta.isDragging) return;
+          if (e.cancelable) e.preventDefault();
+          if (e.touches && e.touches[0]) updateDragPosition(e.touches[0].clientY);
+        };
+
+        const handleWindowPointerEnd = () => {
+          if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
+          if (dragMetaRef.current?.isDragging) {
+            const activeEl = cardElsRef.current.get(dragMetaRef.current.id);
+            if (activeEl) activeEl.style.transform = '';
+            document.body.style.overflow = '';
+            document.body.style.touchAction = '';
+            setDragState(null);
+          }
+          dragMetaRef.current = null;
+        };
+
+        window.addEventListener('pointermove', handleWindowPointerMove, { passive: false });
+        window.addEventListener('touchmove', handleWindowTouchMove, { passive: false });
+        window.addEventListener('pointerup', handleWindowPointerEnd);
+        window.addEventListener('touchend', handleWindowPointerEnd);
+        window.addEventListener('touchcancel', handleWindowPointerEnd);
+
+        return () => {
+          document.body.style.overflow = '';
+          document.body.style.touchAction = '';
+          window.removeEventListener('pointermove', handleWindowPointerMove);
+          window.removeEventListener('touchmove', handleWindowTouchMove);
+          window.removeEventListener('pointerup', handleWindowPointerEnd);
+          window.removeEventListener('touchend', handleWindowPointerEnd);
+          window.removeEventListener('touchcancel', handleWindowPointerEnd);
+        };
+      }, [reorderItems]);
+
+      // Conflict-Safe Timestamp Gist Sync with Merging
+      const pullFromGist = useCallback(async (cfg = syncConfig, silent = false) => {
+        if (!cfg.token || !cfg.gistId) return;
+        setSyncStatus('syncing');
+        try {
+          const res = await fetch(`https://api.github.com/gists/${cfg.gistId.trim()}`, {
+            headers: { Authorization: `Bearer ${cfg.token.trim()}`, Accept: 'application/vnd.github+json' },
+            cache: 'no-store',
+          });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const data = await res.json();
+          const file = data.files && data.files[GIST_FILENAME];
+          if (file && file.content) {
+            const remotePayload = JSON.parse(file.content);
+            const remoteTasks = Array.isArray(remotePayload) ? remotePayload : (remotePayload.tasks || []);
+            const remoteDeleted = Array.isArray(remotePayload.deletedIds) ? remotePayload.deletedIds : [];
+
+            setTasks((localTasks) => {
+              const taskMap = new Map();
+              localTasks.forEach(t => taskMap.set(t.id, t));
+
+              remoteTasks.forEach(rt => {
+                const lt = taskMap.get(rt.id);
+                if (!lt || (rt.updatedAt || 0) > (lt.updatedAt || 0)) {
+                  taskMap.set(rt.id, rt);
                 }
-                return INITIAL_TASKS;
+              });
+
+              const allDeleted = Array.from(new Set([...deletedIds, ...remoteDeleted]));
+              const merged = Array.from(taskMap.values()).filter(t => !allDeleted.includes(t.id));
+              
+              window.localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+              return merged;
             });
-            const [deletedIds, setDeletedIds] = useState(() => {
-                const saved = localStorage.getItem('triad_deleted_ids');
-                return saved ? JSON.parse(saved) : [];
-            });
-
-            const [filter, setFilter] = useState('all'); // 'all', 'work', 'personal'
-            const [isAddOpen, setIsAddOpen] = useState(false);
-            const [newTitle, setNewTitle] = useState('');
-            const [newCategory, setNewCategory] = useState('work');
-            const [isQuickFocus, setIsQuickFocus] = useState(false);
-            const [toast, setToast] = useState(null);
-
-            // Sync state
-            const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
-            const [gistToken, setGistToken] = useState(() => localStorage.getItem(GIST_TOKEN_KEY) || '');
-            const [gistId, setGistId] = useState(() => localStorage.getItem(GIST_ID_KEY) || '');
-            const [isSyncing, setIsSyncing] = useState(false);
-            const [syncStatus, setSyncStatus] = useState('idle');
-
-            // Completed Drawer
-            const [isCompletedOpen, setIsCompletedOpen] = useState(false);
-
-            // Inline Edit State
-            const [editingId, setEditingId] = useState(null);
-            const [editText, setEditText] = useState('');
-
-            // Drag state ref
-            const dragMetaRef = useRef(null);
-            const [, setForceRender] = useState(0);
-
-            // Save tasks & deleted IDs to localStorage
-            useEffect(() => {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
-                localStorage.setItem('triad_deleted_ids', JSON.stringify(deletedIds));
-            }, [tasks, deletedIds]);
-
-            // Save Gist credentials persistently
-            useEffect(() => {
-                localStorage.setItem(GIST_TOKEN_KEY, gistToken);
-                localStorage.setItem(GIST_ID_KEY, gistId);
-            }, [gistToken, gistId]);
-
-            const triggerToast = (msg) => {
-                setToast(msg);
-                setTimeout(() => setToast(null), 3000);
-            };
-
-            const focusCount = tasks.filter(t => t.status === 'focus').length;
-
-            // Auto push/pull sync if configured
-            const autoSyncWithGist = async (updatedTasks, updatedDeleted) => {
-                if (!gistToken || !gistId) return;
-                try {
-                    const res = await fetch(`https://api.github.com/gists/${gistId}`, {
-                        headers: { 'Authorization': `token ${gistToken}` }
-                    });
-                    if (!res.ok) return;
-                    const data = await res.json();
-                    const filename = 'triad-tasks-v2.json';
-                    if (data.files && data.files[filename]) {
-                        const remoteContent = JSON.parse(data.files[filename].content);
-                        const remoteTasks = remoteContent.tasks || [];
-                        const remoteDeleted = remoteContent.deletedIds || [];
-
-                        const mergedMap = new Map();
-                        const allTasksMap = [...tasks, ...updatedTasks, ...remoteTasks];
-
-                        allTasksMap.forEach(t => {
-                            if (updatedDeleted.includes(t.id) || remoteDeleted.includes(t.id)) return;
-                            const existing = mergedMap.get(t.id);
-                            if (!existing || (t.updatedAt || 0) > (existing.updatedAt || 0)) {
-                                mergedMap.set(t.id, t);
-                            }
-                        });
-
-                        const finalTasks = Array.from(mergedMap.values());
-                        const finalDeleted = Array.from(new Set([...deletedIds, ...updatedDeleted, ...remoteDeleted]));
-                        
-                        setTasks(finalTasks);
-                        setDeletedIds(finalDeleted);
-
-                        await fetch(`https://api.github.com/gists/${gistId}`, {
-                            method: 'PATCH',
-                            headers: {
-                                'Authorization': `token ${gistToken}`,
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({
-                                files: {
-                                    [filename]: {
-                                        content: JSON.stringify({ tasks: finalTasks, deletedIds: finalDeleted }, null, 2)
-                                    }
-                                }
-                            })
-                        });
-                    }
-                } catch (err) {
-                    console.error('Auto sync error:', err);
-                }
-            };
-
-            const handleManualSync = async (pushOnly = false) => {
-                if (!gistToken || !gistId) {
-                    triggerToast('Please enter Gist ID & Token first!');
-                    setIsSyncModalOpen(true);
-                    return;
-                }
-                setIsSyncing(true);
-                try {
-                    const filename = 'triad-tasks-v2.json';
-                    if (!pushOnly) {
-                        const res = await fetch(`https://api.github.com/gists/${gistId}`, {
-                            headers: { 'Authorization': `token ${gistToken}` }
-                        });
-                        if (!res.ok) throw new Error('Failed to fetch Gist');
-                        const data = await res.json();
-                        if (data.files && data.files[filename]) {
-                            const remoteContent = JSON.parse(data.files[filename].content);
-                            const remoteTasks = remoteContent.tasks || [];
-                            const remoteDeleted = remoteContent.deletedIds || [];
-
-                            const mergedMap = new Map();
-                            [...tasks, ...remoteTasks].forEach(t => {
-                                if (deletedIds.includes(t.id) || remoteDeleted.includes(t.id)) return;
-                                const existing = mergedMap.get(t.id);
-                                if (!existing || (t.updatedAt || 0) > (existing.updatedAt || 0)) {
-                                    mergedMap.set(t.id, t);
-                                }
-                            });
-                            const finalTasks = Array.from(mergedMap.values());
-                            const finalDeleted = Array.from(new Set([...deletedIds, ...remoteDeleted]));
-                            setTasks(finalTasks);
-                            setDeletedIds(finalDeleted);
-                        }
-                    }
-
-                    const pushRes = await fetch(`https://api.github.com/gists/${gistId}`, {
-                        method: 'PATCH',
-                        headers: {
-                            'Authorization': `token ${gistToken}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            files: {
-                                [filename]: {
-                                    content: JSON.stringify({ tasks, deletedIds }, null, 2)
-                                }
-                            }
-                        })
-                    });
-                    if (!pushRes.ok) throw new Error('Failed to update Gist');
-                    setSyncStatus('success');
-                    triggerToast('Cloud sync successful!');
-                    setTimeout(() => setSyncStatus('idle'), 3000);
-                } catch (err) {
-                    console.error(err);
-                    setSyncStatus('error');
-                    triggerToast('Sync failed. Check credentials.');
-                } finally {
-                    setIsSyncing(false);
-                }
-            };
-
-            // Task Actions
-            const addTask = (e) => {
-                e.preventDefault();
-                if (!newTitle.trim()) return;
-
-                const focusList = tasks.filter(t => t.status === 'focus');
-                let targetStatus = newCategory === 'focus' ? 'focus' : 'queue';
-                
-                if (isQuickFocus && focusCount < 3) {
-                    targetStatus = 'focus';
-                } else if (targetStatus === 'focus' && focusCount >= 3) {
-                    targetStatus = 'queue';
-                    triggerToast('Focus slots full (3/3). Added to Up Next.');
-                }
-
-                const sameStatusCount = tasks.filter(t => t.status === targetStatus).length;
-                const newTask = {
-                    id: Date.now().toString(),
-                    title: newTitle.trim(),
-                    category: newCategory === 'focus' ? 'work' : newCategory,
-                    status: targetStatus,
-                    order: sameStatusCount,
-                    updatedAt: Date.now()
-                };
-
-                const updated = [...tasks, newTask];
-                setTasks(updated);
-                setNewTitle('');
-                setIsQuickFocus(false);
-                setIsAddOpen(false);
-                triggerToast('Task added successfully');
-                autoSyncWithGist(updated, deletedIds);
-            };
-
-            const toggleComplete = (id) => {
-                const target = tasks.find(t => t.id === id);
-                if (!target) return;
-                const newStatus = target.status === 'completed' ? 'queue' : 'completed';
-                const updated = tasks.map(t => t.id === id ? { ...t, status: newStatus, updatedAt: Date.now() } : t);
-                setTasks(updated);
-                autoSyncWithGist(updated, deletedIds);
-                if (newStatus === 'completed') triggerToast('Task completed! 🎉');
-            };
-
-            const moveToFocus = (id) => {
-                if (focusCount >= 3) {
-                    triggerToast('Focus slots are full (3/3)!');
-                    return;
-                }
-                const focusItems = tasks.filter(t => t.status === 'focus');
-                const updated = tasks.map(t => {
-                    if (t.id === id) {
-                        return { ...t, status: 'focus', order: focusItems.length, updatedAt: Date.now() };
-                    }
-                    return t;
-                });
-                setTasks(updated);
-                autoSyncWithGist(updated, deletedIds);
-                triggerToast('Moved to Focus Now');
-            };
-
-            const moveToQueue = (id) => {
-                const queueItems = tasks.filter(t => t.status === 'queue');
-                const updated = tasks.map(t => {
-                    if (t.id === id) {
-                        return { ...t, status: 'queue', order: queueItems.length, updatedAt: Date.now() };
-                    }
-                    return t;
-                });
-                setTasks(updated);
-                autoSyncWithGist(updated, deletedIds);
-                triggerToast('Returned to Up Next');
-            };
-
-            const moveToWaiting = (id) => {
-                const waitingItems = tasks.filter(t => t.status === 'waiting');
-                const updated = tasks.map(t => {
-                    if (t.id === id) {
-                        return { ...t, status: 'waiting', order: waitingItems.length, updatedAt: Date.now() };
-                    }
-                    return t;
-                });
-                setTasks(updated);
-                autoSyncWithGist(updated, deletedIds);
-                triggerToast('Parked in Waiting Shelf');
-            };
-
-            const deleteTask = (id) => {
-                const updated = tasks.filter(t => t.id !== id);
-                const newDeleted = [...deletedIds, id];
-                setTasks(updated);
-                setDeletedIds(newDeleted);
-                autoSyncWithGist(updated, newDeleted);
-                triggerToast('Task deleted');
-            };
-
-            const saveInlineEdit = (id) => {
-                if (!editText.trim()) {
-                    setEditingId(null);
-                    return;
-                }
-                const updated = tasks.map(t => t.id === id ? { ...t, title: editText.trim(), updatedAt: Date.now() } : t);
-                setTasks(updated);
-                setEditingId(null);
-                autoSyncWithGist(updated, deletedIds);
-                triggerToast('Task updated');
-            };
-
-            // Global Pointer Events for Robust Drag and Drop
-            const handlePointerDown = (e, item, statusList) => {
-                if (e.button !== undefined && e.button !== 0) return; // Only left click / touch
-                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-                const cardEl = e.currentTarget.closest('[data-id]');
-                const rect = cardEl ? cardEl.getBoundingClientRect() : { top: 0, height: 60 };
-                
-                dragMetaRef.current = {
-                    id: item.id,
-                    status: item.status,
-                    startY: clientY,
-                    offsetY: 0,
-                    initialTop: rect.top,
-                    height: rect.height,
-                    list: statusList
-                };
-
-                window.addEventListener('pointermove', handlePointerMove);
-                window.addEventListener('pointerup', handlePointerUp);
-                window.addEventListener('touchmove', handleTouchMove, { passive: false });
-                window.addEventListener('touchend', handlePointerUp);
-
-                setForceRender(n => n + 1);
-            };
-
-            const handleTouchMove = (e) => {
-                if (dragMetaRef.current) {
-                    e.preventDefault(); // Stop mobile browser scrolling while dragging
-                }
-            };
-
-            const handlePointerMove = (e) => {
-                const meta = dragMetaRef.current;
-                if (!meta) return;
-                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-                const deltaY = clientY - meta.startY;
-                meta.offsetY = deltaY;
-
-                // Check for item swap based on midpoint threshold
-                const siblings = tasks.filter(t => t.status === meta.status).sort((a,b) => a.order - b.order);
-                const currentIndex = siblings.findIndex(t => t.id === meta.id);
-
-                if (currentIndex > 0 && deltaY < -meta.height * 0.45) {
-                    const prev = siblings[currentIndex - 1];
-                    reorderItems(meta.id, prev.id, meta.status);
-                    meta.startY = clientY;
-                    meta.initialTop -= meta.height;
-                    meta.offsetY = 0;
-                } else if (currentIndex < siblings.length - 1 && deltaY > meta.height * 0.45) {
-                    const next = siblings[currentIndex + 1];
-                    reorderItems(meta.id, next.id, meta.status);
-                    meta.startY = clientY;
-                    meta.initialTop += meta.height;
-                    meta.offsetY = 0;
-                }
-                setForceRender(n => n + 1);
-            };
-
-            const handlePointerUp = () => {
-                if (!dragMetaRef.current) return;
-                dragMetaRef.current = null;
-
-                window.removeEventListener('pointermove', handlePointerMove);
-                window.removeEventListener('pointerup', handlePointerUp);
-                window.removeEventListener('touchmove', handleTouchMove);
-                window.removeEventListener('touchend', handlePointerUp);
-
-                setForceRender(n => n + 1);
-            };
-
-            const reorderItems = (draggedId, targetId, status) => {
-                const list = tasks.filter(t => t.status === status).sort((a,b) => a.order - b.order);
-                const draggedIdx = list.findIndex(t => t.id === draggedId);
-                const targetIdx = list.findIndex(t => t.id === targetId);
-                if (draggedIdx === -1 || targetIdx === -1) return;
-
-                const [removed] = list.splice(draggedIdx, 1);
-                list.splice(targetIdx, 0, removed);
-
-                const reorderedMap = new Map(list.map((t, idx) => [t.id, idx]));
-                const updated = tasks.map(t => {
-                    if (t.status === status && reorderedMap.has(t.id)) {
-                        return { ...t, order: reorderedMap.get(t.id), updatedAt: Date.now() };
-                    }
-                    return t;
-                });
-                setTasks(updated);
-                autoSyncWithGist(updated, deletedIds);
-            };
-
-            const matchesFilter = (t) => {
-                if (filter === 'all') return true;
-                return t.category === filter;
-            };
-
-            const focusTasks = tasks.filter(t => t.status === 'focus' && matchesFilter(t)).sort((a,b) => a.order - b.order);
-            const queueTasks = tasks.filter(t => t.status === 'queue' && matchesFilter(t)).sort((a,b) => a.order - b.order);
-            const waitingTasks = tasks.filter(t => t.status === 'waiting' && matchesFilter(t)).sort((a,b) => a.order - b.order);
-            const completedTasks = tasks.filter(t => t.status === 'completed' && matchesFilter(t)).sort((a,b) => b.updatedAt - a.updatedAt);
-
-            return (
-                <div className="min-h-screen bg-[#0F1117] text-slate-100 flex flex-col items-center">
-                    
-                    {/* Toast Notification */}
-                    {toast && (
-                        <div className="fixed top-5 z-50 bg-slate-800 text-slate-100 px-4 py-2.5 rounded-2xl shadow-2xl border border-slate-700/80 text-sm font-medium flex items-center space-x-2 animate-bounce">
-                            <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-                            <span>{toast}</span>
-                        </div>
-                    )}
-
-                    <div className="w-full max-w-5xl mx-auto flex flex-col min-h-screen md:py-8 md:px-4">
-                        
-                        {/* Header */}
-                        <header className="px-5 pt-6 pb-4 flex items-center justify-between border-b border-slate-800/60 bg-[#0F1117]/80 backdrop-blur-md sticky top-0 z-30">
-                            <div>
-                                <div className="text-xs uppercase tracking-wider text-slate-400 font-semibold mb-0.5">
-                                    {new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                                </div>
-                                <h1 className="text-2xl font-extrabold tracking-tight text-white flex items-center space-x-2">
-                                    <span>Triad</span>
-                                </h1>
-                            </div>
-
-                            <div className="flex items-center space-x-3">
-                                <button 
-                                    onClick={() => setIsSyncModalOpen(true)}
-                                    className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center space-x-1.5 transition border ${
-                                        gistToken && gistId 
-                                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20' 
-                                            : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
-                                    }`}
-                                >
-                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
-                                    <span>{gistToken && gistId ? 'Synced' : 'Cloud Sync'}</span>
-                                </button>
-
-                                <div className="flex items-center space-x-2 bg-slate-900/90 border border-slate-800 px-3 py-1.5 rounded-full shadow-inner">
-                                    <svg className="w-5 h-5 -rotate-90" viewBox="0 0 36 36">
-                                        <path className="text-slate-800" strokeWidth="3.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
-                                        <path className={focusCount >= 3 ? "text-amber-500 transition-all duration-500" : "text-indigo-500 transition-all duration-500"} 
-                                            strokeDasharray={`${(focusCount / 3) * 100}, 100`} strokeWidth="3.5" strokeLinecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
-                                    </svg>
-                                    <span className="text-xs font-bold tracking-tight text-slate-200">{focusCount}/3</span>
-                                </div>
-
-                                <button
-                                    onClick={() => { setIsQuickFocus(false); setIsAddOpen(true); }}
-                                    className="hidden md:flex items-center space-x-1.5 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-lg shadow-indigo-600/20 transition active:scale-95"
-                                >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4"/></svg>
-                                    <span>Add Task</span>
-                                </button>
-                            </div>
-                        </header>
-
-                        {/* Filter Bar */}
-                        <div className="px-5 py-3 bg-[#0F1117] flex items-center justify-between border-b border-slate-800/40">
-                            <div className="flex space-x-1 bg-slate-900/90 p-1 rounded-xl border border-slate-800">
-                                {['all', 'work', 'personal'].map((cat) => (
-                                    <button
-                                        key={cat}
-                                        onClick={() => setFilter(cat)}
-                                        className={`px-4 py-1.5 rounded-lg text-xs font-bold capitalize transition ${
-                                            filter === cat 
-                                                ? 'bg-slate-800 text-white shadow-sm border border-slate-700/60' 
-                                                : 'text-slate-400 hover:text-slate-200'
-                                        }`}
-                                    >
-                                        {cat}
-                                    </button>
-                                ))}
-                            </div>
-                            
-                            <div className="text-xs text-slate-400 font-medium">
-                                {focusCount >= 3 ? (
-                                    <span className="text-amber-400 font-semibold flex items-center space-x-1">
-                                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
-                                        <span>Focus Locked (3/3)</span>
-                                    </span>
-                                ) : (
-                                    <span className="text-indigo-400 font-semibold">{3 - focusCount} slots open</span>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Main App Content Grid */}
-                        <main className="flex-1 px-5 py-4 pb-28 md:pb-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-                            
-                            {/* Left Column: Focus Now */}
-                            <div className="space-y-4">
-                                <div className="flex items-center justify-between">
-                                    <h2 className="text-xs font-extrabold uppercase tracking-widest text-indigo-400 flex items-center space-x-2">
-                                        <span>Focus Now (Max 3)</span>
-                                    </h2>
-                                    <span className="text-xs text-slate-400 font-semibold">{focusCount}/3 active</span>
-                                </div>
-
-                                <div className="space-y-3">
-                                    {[0, 1, 2].map((slotIndex) => {
-                                        const task = focusTasks[slotIndex];
-                                        const isDraggingThis = dragMetaRef.current && dragMetaRef.current.id === task?.id;
-                                        const dragOffsetY = isDraggingThis ? dragMetaRef.current.offsetY : 0;
-
-                                        if (!task) {
-                                            return (
-                                                <div key={`empty-${slotIndex}`} className="border-2 border-dashed border-slate-800/80 rounded-2xl p-4 flex items-center justify-center text-slate-400 text-xs font-semibold h-[74px] bg-slate-950/20">
-                                                    Slot {slotIndex + 1} open
-                                                </div>
-                                            );
-                                        }
-
-                                        return (
-                                            <div
-                                                key={task.id}
-                                                data-id={task.id}
-                                                style={{
-                                                    transform: `translate3d(0, ${dragOffsetY}px, 0)`,
-                                                    zIndex: isDraggingThis ? 30 : 10,
-                                                    transition: isDraggingThis ? 'none' : 'transform 0.15s ease'
-                                                }}
-                                                className={`relative bg-[#161922] border rounded-2xl p-3.5 flex items-center justify-between shadow-lg transition-colors group ${
-                                                    task.category === 'work' ? 'border-indigo-500/30 hover:border-indigo-500/50' : 'border-teal-500/30 hover:border-teal-500/50'
-                                                } ${isDraggingThis ? 'shadow-2xl ring-2 ring-indigo-500/60 opacity-95 bg-[#1b1f2e]' : ''}`}
-                                            >
-                                                <div className={`absolute left-0 top-3 bottom-3 w-1 rounded-r-full ${task.category === 'work' ? 'bg-indigo-500' : 'bg-teal-400'}`}></div>
-
-                                                <div className="flex items-center space-x-3 pl-2.5 flex-1 min-w-0">
-                                                    {/* Drag Handle */}
-                                                    <div 
-                                                        onPointerDown={(e) => handlePointerDown(e, task, 'focus')}
-                                                        className="cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-200 p-2 touch-dragging select-none"
-                                                        title="Drag to reorder"
-                                                    >
-                                                        <svg className="w-5 h-5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 8h16M4 16h16"/></svg>
-                                                    </div>
-
-                                                    <button
-                                                        onClick={() => toggleComplete(task.id)}
-                                                        className="w-6 h-6 rounded-lg border-2 border-slate-600 hover:border-indigo-400 flex items-center justify-center transition shrink-0"
-                                                    >
-                                                        <svg className="w-3.5 h-3.5 text-indigo-400 opacity-0 hover:opacity-100 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"/></svg>
-                                                    </button>
-
-                                                    <div className="flex-1 min-w-0">
-                                                        {editingId === task.id ? (
-                                                            <input
-                                                                type="text"
-                                                                autoFocus
-                                                                value={editText}
-                                                                onChange={(e) => setEditText(e.target.value)}
-                                                                onBlur={() => saveInlineEdit(task.id)}
-                                                                onKeyDown={(e) => { if (e.key === 'Enter') saveInlineEdit(task.id); if (e.key === 'Escape') setEditingId(null); }}
-                                                                className="w-full bg-slate-900 border border-indigo-500/60 rounded-lg px-2.5 py-1 text-sm text-white focus:outline-none"
-                                                            />
-                                                        ) : (
-                                                            <div 
-                                                                onClick={() => { setEditingId(task.id); setEditText(task.title); }}
-                                                                className="text-sm font-semibold text-slate-100 truncate cursor-pointer hover:text-indigo-300 transition"
-                                                                title="Click to edit"
-                                                            >
-                                                                {task.title}
-                                                            </div>
-                                                        )}
-                                                        <div className="flex items-center space-x-2 mt-0.5">
-                                                            <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${task.category === 'work' ? 'bg-indigo-500/10 text-indigo-400' : 'bg-teal-500/10 text-teal-400'}`}>
-                                                                {task.category}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                <div className="flex items-center space-x-1 shrink-0 ml-2">
-                                                    <button
-                                                        onClick={() => moveToWaiting(task.id)}
-                                                        className="text-slate-400 hover:text-amber-400 p-1.5 rounded-lg hover:bg-slate-800 transition"
-                                                        title="Park / Wait on external"
-                                                    >
-                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                                    </button>
-                                                    <button
-                                                        onClick={() => moveToQueue(task.id)}
-                                                        className="text-slate-400 hover:text-indigo-400 p-1.5 rounded-lg hover:bg-slate-800 transition"
-                                                        title="Move to Up Next Queue"
-                                                    >
-                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"/></svg>
-                                                    </button>
-                                                    <button
-                                                        onClick={() => deleteTask(task.id)}
-                                                        className="text-slate-400 hover:text-rose-400 p-1.5 rounded-lg hover:bg-slate-800 transition"
-                                                        title="Delete task"
-                                                    >
-                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2.002 2.002 0 0116.138 21H7.862a2.002 2.002 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-
-                            {/* Right Column: Up Next Queue & Waiting Shelf */}
-                            <div className="space-y-6">
-                                
-                                <div className="space-y-4">
-                                    <div className="flex items-center justify-between">
-                                        <h2 className="text-xs font-extrabold uppercase tracking-widest text-slate-400">Up Next Queue</h2>
-                                        <span className="text-xs text-slate-400 font-semibold">{queueTasks.length} items</span>
-                                    </div>
-
-                                    <div className="space-y-2.5 max-h-[320px] overflow-y-auto pr-1">
-                                        {queueTasks.length === 0 ? (
-                                            <div className="text-center py-6 border border-dashed border-slate-800 rounded-2xl text-slate-400 text-xs">
-                                                No tasks in backlog queue
-                                            </div>
-                                        ) : (
-                                            queueTasks.map((task) => {
-                                                const isDraggingThis = dragMetaRef.current && dragMetaRef.current.id === task.id;
-                                                const dragOffsetY = isDraggingThis ? dragMetaRef.current.offsetY : 0;
-
-                                                return (
-                                                    <div
-                                                        key={task.id}
-                                                        data-id={task.id}
-                                                        style={{
-                                                            transform: `translate3d(0, ${dragOffsetY}px, 0)`,
-                                                            zIndex: isDraggingThis ? 30 : 10,
-                                                            transition: isDraggingThis ? 'none' : 'transform 0.15s ease'
-                                                        }}
-                                                        className={`bg-[#161922] border border-slate-800/80 rounded-2xl p-3 flex items-center justify-between shadow transition ${isDraggingThis ? 'shadow-2xl ring-2 ring-indigo-500/60 opacity-95 bg-[#1b1f2e]' : ''}`}
-                                                    >
-                                                        <div className="flex items-center space-x-3 flex-1 min-w-0 pl-1">
-                                                            <div 
-                                                                onPointerDown={(e) => handlePointerDown(e, task, 'queue')}
-                                                                className="cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-200 p-2 touch-dragging select-none"
-                                                                title="Drag to reorder"
-                                                            >
-                                                                <svg className="w-5 h-5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 8h16M4 16h16"/></svg>
-                                                            </div>
-
-                                                            <div className="flex-1 min-w-0">
-                                                                {editingId === task.id ? (
-                                                                    <input
-                                                                        type="text"
-                                                                        autoFocus
-                                                                        value={editText}
-                                                                        onChange={(e) => setEditText(e.target.value)}
-                                                                        onBlur={() => saveInlineEdit(task.id)}
-                                                                        onKeyDown={(e) => { if (e.key === 'Enter') saveInlineEdit(task.id); if (e.key === 'Escape') setEditingId(null); }}
-                                                                        className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-sm text-white focus:outline-none"
-                                                                    />
-                                                                ) : (
-                                                                    <div 
-                                                                        onClick={() => { setEditingId(task.id); setEditText(task.title); }}
-                                                                        className="text-sm font-medium text-slate-200 truncate cursor-pointer hover:text-indigo-300 transition"
-                                                                        title="Click to edit"
-                                                                    >
-                                                                        {task.title}
-                                                                    </div>
-                                                                )}
-                                                                <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${task.category === 'work' ? 'bg-indigo-500/10 text-indigo-400' : 'bg-teal-500/10 text-teal-400'}`}>
-                                                                    {task.category}
-                                                                </span>
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="flex items-center space-x-1 shrink-0 ml-2">
-                                                            {focusCount < 3 ? (
-                                                                <button
-                                                                    onClick={() => moveToFocus(task.id)}
-                                                                    className="bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 px-2.5 py-1 rounded-lg text-xs font-bold transition"
-                                                                >
-                                                                    Focus →
-                                                                </button>
-                                                            ) : (
-                                                                <span className="text-[10px] bg-slate-800 text-slate-400 px-2 py-1 rounded-lg font-semibold">Full</span>
-                                                            )}
-                                                            <button
-                                                                onClick={() => deleteTask(task.id)}
-                                                                className="text-slate-400 hover:text-rose-400 p-1.5 rounded-lg hover:bg-slate-800 transition"
-                                                            >
-                                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2.002 2.002 0 0116.138 21H7.862a2.002 2.002 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })
-                                        )}
-                                    </div>
-                                </div>
-
-                                {waitingTasks.length > 0 && (
-                                    <div className="space-y-3">
-                                        <div className="flex items-center justify-between">
-                                            <h2 className="text-xs font-extrabold uppercase tracking-widest text-amber-400 flex items-center space-x-1.5">
-                                                <span>Waiting On / Parked</span>
-                                            </h2>
-                                            <span className="text-xs text-slate-400 font-semibold">{waitingTasks.length} parked</span>
-                                        </div>
-                                        <div className="space-y-2">
-                                            {waitingTasks.map(task => (
-                                                <div key={task.id} className="bg-[#161922] border border-amber-500/20 rounded-2xl p-3 flex items-center justify-between">
-                                                    <div className="flex-1 min-w-0 pr-2">
-                                                        <div className="text-sm font-medium text-slate-300 truncate">{task.title}</div>
-                                                        <span className="text-[10px] text-amber-400 font-bold uppercase tracking-wider">Blocked / Waiting</span>
-                                                    </div>
-                                                    <div className="flex items-center space-x-1">
-                                                        {focusCount < 3 && (
-                                                            <button
-                                                                onClick={() => moveToFocus(task.id)}
-                                                                className="bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 px-2.5 py-1 rounded-lg text-xs font-bold transition"
-                                                            >
-                                                                Resume
-                                                            </button>
-                                                        )}
-                                                        <button
-                                                            onClick={() => moveToQueue(task.id)}
-                                                            className="text-slate-400 hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-800 transition text-xs font-medium"
-                                                        >
-                                                            To Queue
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-
-                                <div>
-                                    <button
-                                        onClick={() => setIsCompletedOpen(!isCompletedOpen)}
-                                        className="w-full py-3 px-4 bg-[#161922] border border-slate-800/80 rounded-2xl flex items-center justify-between text-xs font-bold text-slate-300 hover:bg-slate-800/50 transition"
-                                    >
-                                        <span className="flex items-center space-x-2">
-                                            <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-                                            <span>Completed Momentum ({completedTasks.length})</span>
-                                        </span>
-                                        <svg className={`w-4 h-4 transform transition-transform ${isCompletedOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"/></svg>
-                                    </button>
-
-                                    {isCompletedOpen && (
-                                        <div className="mt-2 space-y-2 max-h-60 overflow-y-auto pr-1">
-                                            {completedTasks.length === 0 ? (
-                                                <div className="text-center py-4 text-slate-400 text-xs">No completed tasks yet today.</div>
-                                            ) : (
-                                                completedTasks.map(task => (
-                                                    <div key={task.id} className="bg-slate-900/60 border border-slate-800/60 rounded-xl p-2.5 flex items-center justify-between text-xs">
-                                                        <span className="line-through text-slate-400 truncate flex-1 pr-2">{task.title}</span>
-                                                        <button
-                                                            onClick={() => toggleComplete(task.id)}
-                                                            className="text-indigo-400 hover:underline font-semibold shrink-0"
-                                                        >
-                                                            Restore
-                                                        </button>
-                                                    </div>
-                                                ))
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-
-                            </div>
-                        </main>
-
-                        {/* Mobile Floating Bottom Dock */}
-                        <div className="md:hidden fixed bottom-0 left-0 right-0 p-4 bg-[#0F1117]/90 backdrop-blur-xl border-t border-slate-800 flex items-center justify-between z-30">
-                            <button
-                                onClick={() => { setIsQuickFocus(false); setIsAddOpen(true); }}
-                                className="w-full py-3.5 bg-indigo-600 active:bg-indigo-500 text-white rounded-2xl font-bold text-sm shadow-lg shadow-indigo-600/30 flex items-center justify-center space-x-2"
-                            >
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4"/></svg>
-                                <span>Add New Task</span>
-                            </button>
-                        </div>
-
-                        {/* Add Task Modal */}
-                        {isAddOpen && (
-                            <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/70 backdrop-blur-sm p-0 md:p-4">
-                                <div className="w-full md:max-w-md bg-[#161922] border border-slate-800 rounded-t-3xl md:rounded-3xl p-6 shadow-2xl animate-in fade-in slide-in-from-bottom duration-200">
-                                    <div className="w-12 h-1 bg-slate-700 rounded-full mx-auto mb-5 md:hidden"></div>
-                                    <div className="flex items-center justify-between mb-4">
-                                        <h3 className="text-lg font-extrabold text-white">Create New Task</h3>
-                                        <button onClick={() => setIsAddOpen(false)} className="text-slate-400 hover:text-white p-1">
-                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                                        </button>
-                                    </div>
-
-                                    <form onSubmit={addTask} className="space-y-4">
-                                        <div>
-                                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Task Title</label>
-                                            <input
-                                                type="text"
-                                                autoFocus
-                                                value={newTitle}
-                                                onChange={(e) => setNewTitle(e.target.value)}
-                                                placeholder="e.g. Review CI/CD pipeline logs..."
-                                                className="w-full bg-slate-900 border border-slate-800 rounded-2xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition"
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Context Category</label>
-                                            <div className="grid grid-cols-2 gap-3">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setNewCategory('work')}
-                                                    className={`py-2.5 rounded-xl text-xs font-bold border transition ${newCategory === 'work' ? 'bg-indigo-600 text-white border-indigo-500 shadow-md shadow-indigo-600/20' : 'bg-slate-900 text-slate-300 border-slate-800'}`}
-                                                >
-                                                    Work
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setNewCategory('personal')}
-                                                    className={`py-2.5 rounded-xl text-xs font-bold border transition ${newCategory === 'personal' ? 'bg-teal-600 text-white border-teal-500 shadow-md shadow-teal-600/20' : 'bg-slate-900 text-slate-300 border-slate-800'}`}
-                                                >
-                                                    Personal
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        <div className="pt-2">
-                                            <button
-                                                type="submit"
-                                                className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold text-sm shadow-lg shadow-indigo-600/20 transition active:scale-98"
-                                            >
-                                                Save Task
-                                            </button>
-                                        </div>
-                                    </form>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* GitHub Gist Cloud Sync Modal */}
-                        {isSyncModalOpen && (
-                            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-                                <div className="w-full max-w-md bg-[#161922] border border-slate-800 rounded-3xl p-6 shadow-2xl">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <h3 className="text-lg font-extrabold text-white flex items-center space-x-2">
-                                            <span>GitHub Gist Sync</span>
-                                        </h3>
-                                        <button onClick={() => setIsSyncModalOpen(false)} className="text-slate-400 hover:text-white p-1">
-                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                                        </button>
-                                    </div>
-
-                                    <p className="text-xs text-slate-400 mb-4 leading-relaxed">
-                                        Sync tasks seamlessly across your computer and phone using a Private GitHub Gist. Your credentials are saved securely in your browser.
-                                    </p>
-
-                                    <div className="space-y-4">
-                                        <div>
-                                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">GitHub Personal Access Token</label>
-                                            <input
-                                                type="password"
-                                                value={gistToken}
-                                                onChange={(e) => setGistToken(e.target.value)}
-                                                placeholder="ghp_..."
-                                                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 font-mono"
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="log block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Secret Gist ID</label>
-                                            <input
-                                                type="text"
-                                                value={gistId}
-                                                onChange={(e) => setGistId(e.target.value)}
-                                                placeholder="e.g. a1b2c3d4e5f6..."
-                                                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 font-mono"
-                                            />
-                                        </div>
-
-                                        <div className="pt-2 flex space-x-3">
-                                            <button
-                                                onClick={() => handleManualSync(false)}
-                                                disabled={isSyncing}
-                                                className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-xs shadow-md shadow-indigo-600/20 transition disabled:opacity-50"
-                                            >
-                                                {isSyncing ? 'Syncing...' : 'Sync & Save'}
-                                            </button>
-                                            <button
-                                                onClick={() => handleManualSync(true)}
-                                                disabled={isSyncing}
-                                                className="px-4 py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl font-bold text-xs transition"
-                                            >
-                                                Push Local
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                    </div>
-                </div>
-            );
+          }
+          setSyncStatus('synced');
+          if (!silent) triggerToast('Synced & merged with Cloud');
+        } catch (err) {
+          console.error(err);
+          setSyncStatus('error');
+          if (!silent) triggerToast('Sync failed — check credentials');
+        }
+      }, [syncConfig, deletedIds, triggerToast]);
+
+      const pushToGist = useCallback(async (nextTasks, currentDeleted, cfg = syncConfig) => {
+        if (!cfg.token || !cfg.gistId) return;
+        setSyncStatus('syncing');
+        try {
+          const payload = { tasks: nextTasks, deletedIds: currentDeleted };
+          const res = await fetch(`https://api.github.com/gists/${cfg.gistId.trim()}`, {
+            method: 'PATCH',
+            headers: {
+              Authorization: `Bearer ${cfg.token.trim()}`,
+              Accept: 'application/vnd.github+json',
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              files: {
+                [GIST_FILENAME]: { content: JSON.stringify(payload, null, 2) }
+              }
+            }),
+          });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          setSyncStatus('synced');
+        } catch (err) {
+          console.error(err);
+          setSyncStatus('error');
+        }
+      }, [syncConfig]);
+
+      useEffect(() => {
+        if (!isConfigured) return;
+        pullFromGist(syncConfig, true);
+        const handleVisibility = () => {
+          if (document.visibilityState === 'visible') pullFromGist(syncConfig, true);
+        };
+        document.addEventListener('visibilitychange', handleVisibility);
+        return () => document.removeEventListener('visibilitychange', handleVisibility);
+      }, [isConfigured, syncConfig, pullFromGist]);
+
+      useEffect(() => {
+        try {
+          window.localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+          window.localStorage.setItem(STORAGE_KEY + '_deleted', JSON.stringify(deletedIds));
+        } catch (err) { console.error(err); }
+
+        if (!isConfigured || dragState) return;
+        if (skipNextPushRef.current) {
+          skipNextPushRef.current = false;
+          return;
         }
 
-        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
-    </script>
+        const timer = setTimeout(() => {
+          pushToGist(tasks, deletedIds, syncConfig);
+        }, 650);
+        return () => clearTimeout(timer);
+      }, [tasks, deletedIds, isConfigured, syncConfig, pushToGist, dragState]);
+
+      useEffect(() => {
+        if (isSheetOpen) {
+          const timer = setTimeout(() => titleInputRef.current?.focus(), 60);
+          return () => clearTimeout(timer);
+        }
+      }, [isSheetOpen]);
+
+      useEffect(() => {
+        if (editingId) {
+          const timer = setTimeout(() => editInputRef.current?.focus(), 50);
+          return () => clearTimeout(timer);
+        }
+      }, [editingId]);
+
+      useEffect(() => {
+        const onKeyDown = (e) => {
+          if (e.key === 'Escape') {
+            setIsSheetOpen(false);
+            setIsSyncModalOpen(false);
+            setEditingId(null);
+          }
+        };
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+      }, []);
+
+      useEffect(() => {
+        if (!toast) return;
+        const timer = setTimeout(() => setToast(''), 2600);
+        return () => clearTimeout(timer);
+      }, [toast]);
+
+      const handleSaveSyncSettings = async (e) => {
+        e.preventDefault();
+        const cleanCfg = { token: tokenInput.trim(), gistId: gistIdInput.trim() };
+        setSyncConfig(cleanCfg);
+        window.localStorage.setItem(SYNC_CONFIG_KEY, JSON.stringify(cleanCfg));
+        setIsSyncModalOpen(false);
+        if (cleanCfg.token && cleanCfg.gistId) await pullFromGist(cleanCfg, false);
+        else {
+          setSyncStatus('idle');
+          triggerToast('Cloud sync disconnected');
+        }
+      };
+
+      const allActive = useMemo(() => tasks.filter((t) => t.status === 'active'), [tasks]);
+      const allQueue = useMemo(() => tasks.filter((t) => t.status === 'backlog'), [tasks]);
+      const allWaiting = useMemo(() => tasks.filter((t) => t.status === 'waiting'), [tasks]);
+      const allCompleted = useMemo(() => tasks.filter((t) => t.status === 'completed').sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0)), [tasks]);
+
+      const activeCount = allActive.length;
+      const isLocked = activeCount >= 3;
+      const openSlotsCount = Math.max(0, 3 - activeCount);
+
+      const filterCounts = useMemo(() => {
+        const nonCompleted = tasks.filter((t) => t.status !== 'completed');
+        return {
+          All: nonCompleted.length,
+          Work: nonCompleted.filter((t) => t.category === 'Work').length,
+          Personal: nonCompleted.filter((t) => t.category === 'Personal').length,
+        };
+      }, [tasks]);
+
+      const visibleActive = useMemo(() => filter === 'All' ? allActive : allActive.filter((t) => t.category === filter), [allActive, filter]);
+      const hiddenActiveCount = useMemo(() => filter === 'All' ? 0 : allActive.filter((t) => t.category !== filter).length, [allActive, filter]);
+      const visibleQueue = useMemo(() => filter === 'All' ? allQueue : allQueue.filter((t) => t.category === filter), [allQueue, filter]);
+      const visibleWaiting = useMemo(() => filter === 'All' ? allWaiting : allWaiting.filter((t) => t.category === filter), [allWaiting, filter]);
+      const visibleCompleted = useMemo(() => filter === 'All' ? allCompleted : allCompleted.filter((t) => t.category === filter), [allCompleted, filter]);
+
+      const triggerLockedFeedback = () => {
+        setShakeMeter(true);
+        triggerToast('3/3 active! Complete or park a task to unlock.');
+        setTimeout(() => setShakeMeter(false), 450);
+      };
+
+      const handleFilterChange = (nextTab) => {
+        setFilter(nextTab);
+        if (nextTab === 'Work' || nextTab === 'Personal') setNewCategory(nextTab);
+      };
+
+      const openAddSheet = () => {
+        if (filter === 'Work' || filter === 'Personal') setNewCategory(filter);
+        setIsSheetOpen(true);
+      };
+
+      const handleAddTask = (e, targetMode = 'backlog') => {
+        if (e) e.preventDefault();
+        const cleanTitle = newTitle.trim();
+        if (!cleanTitle) {
+          titleInputRef.current?.focus();
+          return;
+        }
+
+        const canFocusNow = targetMode === 'active' && activeCount < 3;
+        const newTask = {
+          id: generateId(),
+          title: cleanTitle,
+          category: newCategory,
+          status: canFocusNow ? 'active' : 'backlog',
+          updatedAt: Date.now(),
+          completedAt: null,
+        };
+
+        setTasks((prev) => [...prev, newTask]);
+        setNewTitle('');
+        setIsSheetOpen(false);
+        triggerToast(canFocusNow ? 'Added straight to Focus!' : 'Added to Up Next');
+      };
+
+      const handleCompleteTask = (id) => {
+        if (completingId) return;
+        setCompletingId(id);
+        setTimeout(() => {
+          setTasks((prev) => prev.map((t) => t.id === id ? { ...t, status: 'completed', completedAt: Date.now(), updatedAt: Date.now() } : t));
+          setCompletingId(null);
+          triggerToast('Nice work! 1 focus spot unlocked');
+        }, 220);
+      };
+
+      const handleReturnToQueue = (id) => {
+        setTasks((prev) => prev.map((t) => t.id === id ? { ...t, status: 'backlog', updatedAt: Date.now() } : t));
+        triggerToast('Moved back to Up Next');
+      };
+
+      const handleParkTask = (id) => {
+        setTasks((prev) => prev.map((t) => t.id === id ? { ...t, status: 'waiting', updatedAt: Date.now() } : t));
+        triggerToast('Parked to Waiting On shelf');
+      };
+
+      const handleUnparkTask = (id) => {
+        if (activeCount >= 3) {
+          triggerLockedFeedback();
+          return;
+        }
+        setTasks((prev) => prev.map((t) => t.id === id ? { ...t, status: 'active', updatedAt: Date.now() } : t));
+        triggerToast('Moved back to Focus Now');
+      };
+
+      const handlePromoteToFocus = (id) => {
+        if (activeCount >= 3) {
+          triggerLockedFeedback();
+          return;
+        }
+        setTasks((prev) => prev.map((t) => t.id === id ? { ...t, status: 'active', updatedAt: Date.now() } : t));
+        triggerToast('Moved to Focus Now');
+      };
+
+      const handleDeleteTask = (id) => {
+        setTasks((prev) => prev.filter((t) => t.id !== id));
+        setDeletedIds((prev) => [...prev, id]);
+        triggerToast('Task removed');
+      };
+
+      const handleRestoreTask = (id) => {
+        const nextStatus = activeCount < 3 ? 'active' : 'backlog';
+        setTasks((prev) => prev.map((t) => t.id === id ? { ...t, status: nextStatus, completedAt: null, updatedAt: Date.now() } : t));
+        triggerToast(nextStatus === 'active' ? 'Restored to Focus Now' : 'Restored to Up Next');
+      };
+
+      const handleSaveEdit = (id) => {
+        const clean = editingTitle.trim();
+        if (clean) {
+          setTasks((prev) => prev.map((t) => t.id === id ? { ...t, title: clean, updatedAt: Date.now() } : t));
+          triggerToast('Task updated');
+        }
+        setEditingId(null);
+      };
+
+      const handleResetDemoData = () => {
+        setTasks(INITIAL_TASKS);
+        setDeletedIds([]);
+        setFilter('All');
+        setIsCompletedOpen(false);
+        setIsWaitingOpen(false);
+        triggerToast('Sample tasks restored');
+      };
+
+      return (
+        <div className="min-h-screen bg-[#07080B] md:py-8 md:px-6 lg:px-10 flex items-start justify-center">
+          <div className="relative w-full max-w-[420px] md:max-w-5xl min-h-screen md:min-h-[760px] bg-[#0F1117] md:rounded-[36px] md:border md:border-zinc-800/90 md:shadow-[0_28px_70px_-15px_rgba(0,0,0,0.85)] flex flex-col overflow-hidden">
+            <div aria-hidden="true" className="pointer-events-none absolute -top-24 -right-16 w-60 md:w-96 h-60 md:h-96 rounded-full bg-gradient-to-br from-rose-500/15 via-amber-500/10 to-emerald-500/10 blur-3xl" />
+
+            {/* Sticky Header */}
+            <header className="sticky top-0 z-20 bg-[#0F1117]/85 backdrop-blur-xl px-5 md:px-8 pt-5 md:pt-7 pb-4 md:pb-5 border-b border-zinc-800/80">
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-4 md:mb-0">
+                <div>
+                  <div className="inline-flex items-center gap-1.5 text-[11px] font-bold tracking-[0.09em] text-amber-300/85 uppercase">
+                    <Icon.Moon className="w-3.5 h-3.5 text-amber-400" />
+                    <span>{formattedDate}</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <h1 className="text-[28px] md:text-[32px] font-extrabold tracking-[-0.03em] text-white leading-tight">Triad</h1>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTokenInput(syncConfig.token || '');
+                        setGistIdInput(syncConfig.gistId || '');
+                        setIsSyncModalOpen(true);
+                      }}
+                      title="Configure GitHub Cloud Sync"
+                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold border transition-all cursor-pointer ${
+                        !isConfigured ? 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:border-zinc-700' :
+                        syncStatus === 'error' ? 'bg-rose-500/15 border-rose-500/30 text-rose-300' :
+                        syncStatus === 'syncing' ? 'bg-amber-500/15 border-amber-400/30 text-amber-300' :
+                        'bg-emerald-500/15 border-emerald-500/30 text-emerald-300'
+                      }`}
+                    >
+                      <Icon.Cloud className="w-3 h-3" />
+                      <span>{!isConfigured ? 'Sync' : syncStatus === 'syncing' ? 'Syncing...' : syncStatus === 'error' ? 'Sync Err' : 'Synced'}</span>
+                    </button>
+
+                    {isConfigured && (
+                      <button
+                        type="button"
+                        onClick={() => pullFromGist(syncConfig, false)}
+                        aria-label="Refresh from cloud"
+                        title="Sync now"
+                        className="w-6 h-6 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                      >
+                        <Icon.RefreshCw className={`w-3 h-3 ${syncStatus === 'syncing' ? 'animate-spin' : ''}`} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Desktop Filter Pills */}
+                <div role="group" aria-label="Filter tasks by context" className="hidden md:grid grid-cols-3 gap-1.5 p-1.5 rounded-2xl bg-zinc-900 border border-zinc-800/80 min-w-[320px]">
+                  {[
+                    { id: 'All', activeStyle: 'bg-zinc-100 text-zinc-950 shadow-sm', badgeStyle: 'bg-zinc-900/15 text-zinc-900' },
+                    { id: 'Work', activeStyle: 'bg-gradient-to-r from-rose-500 to-orange-500 text-white shadow-[0_4px_14px_rgba(244,63,94,0.35)]', badgeStyle: 'bg-black/20 text-white' },
+                    { id: 'Personal', activeStyle: 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-[0_4px_14px_rgba(16,185,129,0.35)]', badgeStyle: 'bg-black/20 text-white' },
+                  ].map((tab) => {
+                    const isSelected = filter === tab.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        aria-pressed={isSelected}
+                        onClick={() => handleFilterChange(tab.id)}
+                        className={`min-h-[38px] px-4 rounded-xl text-xs font-bold inline-flex items-center justify-center gap-1.5 transition-all duration-200 cursor-pointer focus:outline-none ${isSelected ? tab.activeStyle : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/70'}`}
+                      >
+                        <span>{tab.id}</span>
+                        <span className={`px-1.5 py-0.2 rounded-full text-[10px] tabular-nums ${isSelected ? tab.badgeStyle : 'bg-zinc-800 text-zinc-400'}`}>
+                          {filterCounts[tab.id]}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Right Header Controls */}
+                <div className="flex items-center gap-3">
+                  <PlayfulSlotMeter activeTasks={allActive} isLocked={isLocked} isShaking={shakeMeter} />
+                  <button
+                    type="button"
+                    onClick={openAddSheet}
+                    className="hidden md:inline-flex min-h-[44px] px-5 rounded-2xl bg-gradient-to-r from-rose-500 via-orange-500 to-amber-500 hover:from-rose-600 hover:via-orange-600 hover:to-amber-600 active:scale-[0.98] text-white font-extrabold text-xs shadow-[0_8px_22px_-6px_rgba(244,63,94,0.45)] items-center justify-center gap-2 transition-all cursor-pointer"
+                  >
+                    <Icon.Plus className="w-4 h-4" />
+                    <span>Add Task</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Mobile Filter Pills */}
+              <div role="group" aria-label="Filter tasks by context" className="grid md:hidden grid-cols-3 gap-1.5 p-1.5 rounded-2xl bg-zinc-900 border border-zinc-800/80">
+                {[
+                  { id: 'All', activeStyle: 'bg-zinc-100 text-zinc-950 shadow-sm', badgeStyle: 'bg-zinc-900/15 text-zinc-900' },
+                  { id: 'Work', activeStyle: 'bg-gradient-to-r from-rose-500 to-orange-500 text-white shadow-[0_4px_14px_rgba(244,63,94,0.35)]', badgeStyle: 'bg-black/20 text-white' },
+                  { id: 'Personal', activeStyle: 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-[0_4px_14px_rgba(16,185,129,0.35)]', badgeStyle: 'bg-black/20 text-white' },
+                ].map((tab) => {
+                  const isSelected = filter === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      aria-pressed={isSelected}
+                      onClick={() => handleFilterChange(tab.id)}
+                      className={`min-h-[38px] rounded-xl text-xs font-bold inline-flex items-center justify-center gap-1.5 transition-all duration-200 cursor-pointer focus:outline-none ${isSelected ? tab.activeStyle : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/70'}`}
+                    >
+                      <span>{tab.id}</span>
+                      <span className={`px-1.5 py-0.2 rounded-full text-[10px] tabular-nums ${isSelected ? tab.badgeStyle : 'bg-zinc-800 text-zinc-400'}`}>
+                        {filterCounts[tab.id]}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </header>
+
+            {toast && (
+              <div role="status" aria-live="polite" className="pointer-events-none fixed md:absolute top-32 md:top-24 left-1/2 -translate-x-1/2 z-40 w-max max-w-[90%] px-4 py-2 rounded-full bg-zinc-100 text-zinc-950 text-xs font-bold shadow-[0_10px_25px_rgba(0,0,0,0.6)] transition-all">
+                {toast}
+              </div>
+            )}
+
+            {/* Main Content */}
+            <main className="flex-1 overflow-y-auto px-5 md:px-8 pt-5 md:pt-8 pb-28 md:pb-10 grid grid-cols-1 md:grid-cols-12 gap-7 md:gap-8 items-start">
+              {/* Left Column on Desktop: FOCUS NOW (MAX 3) */}
+              <section aria-labelledby="focus-now-heading" className="md:col-span-6 lg:col-span-6 md:sticky md:top-0">
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-3.5">
+                  <div className="flex items-center gap-2">
+                    <h2 id="focus-now-heading" className="text-[11px] font-extrabold uppercase tracking-[0.09em] text-zinc-400">
+                      Focus Now (Max 3)
+                    </h2>
+                    {visibleActive.length > 1 && (
+                      <span className="text-[10px] font-semibold text-zinc-600">• Hold to reorder</span>
+                    )}
+                  </div>
+
+                  {isLocked && (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/15 border border-amber-400/30 text-amber-300 text-[11px] font-bold">
+                      <Icon.Lock className="w-3 h-3 text-amber-400" />
+                      <span>Locked 3/3 — Park or Finish 1</span>
+                    </span>
+                  )}
+                </div>
+
+                <div className="space-y-3 md:space-y-3.5">
+                  {visibleActive.map((task) => {
+                    const isWork = task.category === 'Work';
+                    const isPopping = completingId === task.id;
+                    const isDragging = dragState?.id === task.id;
+                    const isEditing = editingId === task.id;
+
+                    return (
+                      <article
+                        key={task.id}
+                        ref={(el) => registerCardEl(task.id, el)}
+                        data-drag-id={task.id}
+                        data-drag-section="active"
+                        onPointerDown={(e) => handleCardPointerDown(e, task, 'active', false)}
+                        style={isDragging ? { zIndex: 30, touchAction: 'none', willChange: 'transform' } : { touchAction: 'pan-y' }}
+                        className={`no-callout group relative overflow-hidden rounded-3xl border select-none ${
+                          isDragging ? 'ring-2 ring-amber-400/90 shadow-[0_22px_44px_rgba(0,0,0,0.8)]' : 'transition-all duration-200'
+                        } ${
+                          isWork ? 'bg-gradient-to-r from-rose-500/[0.12] via-[#171A23] to-[#171A23] border-rose-500/30 shadow-[0_8px_22px_-8px_rgba(244,63,94,0.28)]' : 'bg-gradient-to-r from-emerald-500/[0.12] via-[#171A23] to-[#171A23] border-emerald-500/30 shadow-[0_8px_22px_-8px_rgba(16,185,129,0.28)]'
+                        } ${isPopping ? 'scale-[0.96] opacity-40' : ''}`}
+                      >
+                        <div className="flex items-center gap-2 px-3 md:px-4 py-4 md:py-5">
+                          <span
+                            onPointerDown={(e) => handleCardPointerDown(e, task, 'active', true)}
+                            style={{ touchAction: 'none' }}
+                            title="Drag to reorder"
+                            className="p-1.5 -ml-1 text-zinc-500 hover:text-zinc-200 active:text-amber-400 cursor-grab active:cursor-grabbing transition-colors shrink-0"
+                          >
+                            <Icon.GripVertical className="w-4 h-4" />
+                          </span>
+
+                          <button
+                            type="button"
+                            onClick={() => handleCompleteTask(task.id)}
+                            aria-label={`Complete "${task.title}"`}
+                            className={`w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 transition-all duration-200 cursor-pointer active:scale-90 focus:outline-none ${
+                              isPopping ? 'bg-emerald-500 border-emerald-500 text-white scale-110' :
+                              isWork ? 'border-rose-400/70 bg-zinc-900/80 text-transparent hover:border-rose-400 hover:bg-rose-500 hover:text-white' :
+                              'border-emerald-400/70 bg-zinc-900/80 text-transparent hover:border-emerald-400 hover:bg-emerald-500 hover:text-white'
+                            }`}
+                          >
+                            <Icon.Check className="w-4 h-4" />
+                          </button>
+
+                          <div className="flex-1 min-w-0">
+                            {isEditing ? (
+                              <input
+                                ref={editInputRef}
+                                type="text"
+                                value={editingTitle}
+                                onChange={(e) => setEditingTitle(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') handleSaveEdit(task.id);
+                                  if (e.key === 'Escape') setEditingId(null);
+                                }}
+                                onBlur={() => handleSaveEdit(task.id)}
+                                className="w-full bg-[#0F1117] border border-rose-500/60 rounded-xl px-2.5 py-1 text-sm font-bold text-white focus:outline-none"
+                              />
+                            ) : (
+                              <div className="flex items-center gap-2 group/title">
+                                <h3
+                                  onClick={() => {
+                                    setEditingId(task.id);
+                                    setEditingTitle(task.title);
+                                  }}
+                                  title="Click to edit"
+                                  className="text-[15px] md:text-[16px] font-bold text-zinc-50 leading-snug tracking-[-0.01em] break-words cursor-pointer hover:text-amber-200 transition-colors"
+                                >
+                                  {task.title}
+                                </h3>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditingId(task.id);
+                                    setEditingTitle(task.title);
+                                  }}
+                                  aria-label="Edit task title"
+                                  className="opacity-0 group-hover/title:opacity-100 text-zinc-500 hover:text-zinc-200 transition-opacity"
+                                >
+                                  <Icon.Edit2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            )}
+                            <div className="mt-1.5">
+                              <CategoryBadge category={task.category} />
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => handleParkTask(task.id)}
+                              aria-label={`Park "${task.title}" to Waiting On`}
+                              title="Park task (Waiting On)"
+                              className="w-8 h-8 rounded-full text-zinc-400 hover:text-amber-300 hover:bg-amber-500/15 flex items-center justify-center transition-colors cursor-pointer"
+                            >
+                              <Icon.Pause className="w-4 h-4" />
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleReturnToQueue(task.id)}
+                              aria-label={`Move "${task.title}" back to queue`}
+                              title="Move back to queue"
+                              className="w-8 h-8 rounded-full text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 flex items-center justify-center transition-colors cursor-pointer"
+                            >
+                              <Icon.CornerUpLeft className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      </article>
+                    );
+                  })}
+
+                  {hiddenActiveCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => handleFilterChange('All')}
+                      className="w-full flex items-center justify-between px-4 py-3 rounded-2xl bg-amber-500/10 border border-amber-400/25 text-xs font-bold text-amber-200 hover:bg-amber-500/15 transition-colors cursor-pointer"
+                    >
+                      <span>{hiddenActiveCount} {hiddenActiveCount === 1 ? 'spot' : 'spots'} used by {filter === 'Work' ? 'Personal' : 'Work'}</span>
+                      <span className="text-rose-400">Show All →</span>
+                    </button>
+                  )}
+
+                  {Array.from({ length: openSlotsCount }).map((_, idx) => {
+                    const slotNumber = activeCount + idx + 1;
+                    return (
+                      <div key={`open-slot-${slotNumber}`} className="rounded-3xl border-2 border-dashed border-zinc-800 bg-zinc-900/40 px-4 md:px-5 py-4 md:py-5 flex items-center gap-3">
+                        <span className="w-7 h-7 rounded-full bg-amber-500/15 text-amber-300 border border-amber-400/25 flex items-center justify-center text-xs font-extrabold tabular-nums">
+                          {slotNumber}
+                        </span>
+                        <span className="text-xs font-semibold text-zinc-400">
+                          Open Focus Spot — Pick one from Up Next
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+
+              {/* Right Column on Desktop: UP NEXT QUEUE + WAITING SHELF + COMPLETED */}
+              <div className="md:col-span-6 lg:col-span-6 space-y-6">
+                <section aria-labelledby="up-next-heading">
+                  <div className="flex items-center justify-between mb-3.5">
+                    <div className="flex items-center gap-2">
+                      <h2 id="up-next-heading" className="text-[11px] font-extrabold uppercase tracking-[0.09em] text-zinc-400">
+                        Up Next ({visibleQueue.length})
+                      </h2>
+                      {visibleQueue.length > 1 && (
+                        <span className="text-[10px] font-semibold text-zinc-600">• Hold to reorder</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {visibleQueue.length === 0 ? (
+                    <div className="rounded-3xl bg-[#161922] border border-zinc-800/80 py-8 px-5 text-center">
+                      <Icon.Sparkles className="w-5 h-5 text-amber-400 mx-auto mb-2" />
+                      <p className="text-sm font-bold text-zinc-200">{filter === 'All' ? 'Nothing waiting in line' : `No ${filter} tasks queued`}</p>
+                    </div>
+                  ) : (
+                    <ul className="space-y-2.5">
+                      {visibleQueue.map((task) => {
+                        const isWork = task.category === 'Work';
+                        const isDragging = dragState?.id === task.id;
+                        const isEditing = editingId === task.id;
+
+                        return (
+                          <li
+                            key={task.id}
+                            ref={(el) => registerCardEl(task.id, el)}
+                            data-drag-id={task.id}
+                            data-drag-section="backlog"
+                            onPointerDown={(e) => handleCardPointerDown(e, task, 'backlog', false)}
+                            style={isDragging ? { zIndex: 30, touchAction: 'none', willChange: 'transform' } : { touchAction: 'pan-y' }}
+                            className={`no-callout group relative bg-[#161922] rounded-2xl border px-2.5 md:px-3.5 py-3 md:py-3.5 flex items-center gap-2 select-none ${
+                              isDragging ? 'border-amber-400/90 ring-2 ring-amber-400/60 shadow-[0_20px_40px_rgba(0,0,0,0.8)]' : 'border-zinc-800/90 shadow-[0_2px_8px_rgba(0,0,0,0.25)] hover:border-zinc-700 transition-all'
+                            }`}
+                          >
+                            <span
+                              onPointerDown={(e) => handleCardPointerDown(e, task, 'backlog', true)}
+                              style={{ touchAction: 'none' }}
+                              title="Drag to reorder"
+                              className="p-1.5 -ml-0.5 text-zinc-500 hover:text-zinc-200 active:text-amber-400 cursor-grab active:cursor-grabbing transition-colors shrink-0"
+                            >
+                              <Icon.GripVertical className="w-4 h-4" />
+                            </span>
+
+                            <div className="flex-1 min-w-0">
+                              {isEditing ? (
+                                <input
+                                  ref={editInputRef}
+                                  type="text"
+                                  value={editingTitle}
+                                  onChange={(e) => setEditingTitle(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') handleSaveEdit(task.id);
+                                    if (e.key === 'Escape') setEditingId(null);
+                                  }}
+                                  onBlur={() => handleSaveEdit(task.id)}
+                                  className="w-full bg-[#0F1117] border border-rose-500/60 rounded-xl px-2 py-0.5 text-xs font-bold text-white focus:outline-none"
+                                />
+                              ) : (
+                                <div className="flex items-center gap-2 group/title">
+                                  <p
+                                    onClick={() => {
+                                      setEditingId(task.id);
+                                      setEditingTitle(task.title);
+                                    }}
+                                    title="Click to edit"
+                                    className="text-[14px] font-bold text-zinc-100 leading-snug tracking-[-0.01em] break-words cursor-pointer hover:text-amber-200 transition-colors"
+                                  >
+                                    {task.title}
+                                  </p>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setEditingId(task.id);
+                                      setEditingTitle(task.title);
+                                    }}
+                                    className="opacity-0 group-hover/title:opacity-100 text-zinc-500 hover:text-zinc-200 transition-opacity"
+                                  >
+                                    <Icon.Edit2 className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              )}
+                              <div className="mt-1.5">
+                                <CategoryBadge category={task.category} />
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-1 shrink-0">
+                              {isLocked ? (
+                                <button
+                                  type="button"
+                                  onClick={triggerLockedFeedback}
+                                  aria-disabled="true"
+                                  className="min-h-[34px] px-2.5 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-500 text-xs font-bold inline-flex items-center gap-1 cursor-not-allowed hover:bg-amber-500/15 hover:text-amber-300 hover:border-amber-400/30 transition-colors"
+                                >
+                                  <Icon.Lock className="w-3 h-3" />
+                                  <span>Locked</span>
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => handlePromoteToFocus(task.id)}
+                                  className={`min-h-[34px] px-3 rounded-full text-white text-xs font-bold inline-flex items-center gap-1 active:scale-95 transition-all cursor-pointer ${
+                                    isWork ? 'bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-600 hover:to-orange-600 shadow-[0_4px_12px_rgba(244,63,94,0.3)]' : 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 shadow-[0_4px_12px_rgba(16,185,129,0.3)]'
+                                  }`}
+                                >
+                                  <span>Focus</span>
+                                  <Icon.ArrowRight className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteTask(task.id)}
+                                aria-label={`Delete "${task.title}"`}
+                                className="w-7 h-7 rounded-full text-zinc-600 hover:text-rose-400 hover:bg-rose-500/15 flex items-center justify-center transition-colors cursor-pointer"
+                              >
+                                <Icon.X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </section>
+
+                {/* Waiting On / Parked Shelf */}
+                {visibleWaiting.length > 0 && (
+                  <section aria-label="Waiting On / Parked tasks">
+                    <button
+                      type="button"
+                      aria-expanded={isWaitingOpen}
+                      onClick={() => setIsWaitingOpen((prev) => !prev)}
+                      className="min-h-[38px] w-full inline-flex items-center justify-between px-4 py-2 rounded-2xl bg-amber-500/10 border border-amber-400/30 text-xs font-bold text-amber-200 hover:bg-amber-500/15 transition-all cursor-pointer"
+                    >
+                      <span className="inline-flex items-center gap-2">
+                        <Icon.Pause className="w-3.5 h-3.5" />
+                        <span>Waiting On / Parked ({visibleWaiting.length})</span>
+                      </span>
+                      {isWaitingOpen ? <Icon.ChevronUp className="w-3.5 h-3.5" /> : <Icon.ChevronDown className="w-3.5 h-3.5" />}
+                    </button>
+
+                    {isWaitingOpen && (
+                      <div className="mt-2 bg-[#161922] rounded-2xl border border-zinc-800 p-3 space-y-2">
+                        {visibleWaiting.map((task) => (
+                          <div key={task.id} className="bg-zinc-900/80 rounded-xl p-3 flex items-center justify-between gap-2 border border-zinc-800">
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs font-bold text-zinc-200 truncate">{task.title}</p>
+                              <div className="mt-1">
+                                <CategoryBadge category={task.category} />
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => handleUnparkTask(task.id)}
+                                title="Unpark back to Focus Now"
+                                className="min-h-[30px] px-2.5 rounded-full bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer"
+                              >
+                                <Icon.Play className="w-3 h-3" />
+                                <span>Unpark</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteTask(task.id)}
+                                className="w-7 h-7 rounded-full text-zinc-500 hover:text-rose-400 flex items-center justify-center cursor-pointer"
+                              >
+                                <Icon.X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </section>
+                )}
+
+                {/* Completed Drawer */}
+                <section aria-label="Completed tasks" className="pt-1 flex flex-col items-center md:items-stretch">
+                  <button
+                    type="button"
+                    aria-expanded={isCompletedOpen}
+                    onClick={() => setIsCompletedOpen((prev) => !prev)}
+                    className="min-h-[38px] inline-flex items-center justify-center gap-2 px-4 py-1.5 rounded-full bg-[#161922] border border-zinc-800 hover:border-zinc-700 text-xs font-bold text-zinc-400 hover:text-zinc-200 transition-all cursor-pointer"
+                  >
+                    <span>Completed ({visibleCompleted.length})</span>
+                    {isCompletedOpen ? <Icon.ChevronUp className="w-3.5 h-3.5 text-zinc-500" /> : <Icon.ChevronDown className="w-3.5 h-3.5 text-zinc-500" />}
+                  </button>
+
+                  {isCompletedOpen && (
+                    <div className="w-full mt-3 bg-[#161922] rounded-3xl border border-zinc-800/90 p-4 space-y-3">
+                      {visibleCompleted.length === 0 ? (
+                        <p className="text-xs text-zinc-500 text-center py-2">No completed tasks yet.</p>
+                      ) : (
+                        <ul className="divide-y divide-zinc-800/80">
+                          {visibleCompleted.map((task) => (
+                            <li key={task.id} className="py-2.5 first:pt-0 last:pb-0 flex items-center justify-between gap-2.5">
+                              <div className="min-w-0 flex-1">
+                                <p className="text-xs font-semibold text-zinc-500 line-through truncate">{task.title}</p>
+                                <div className="mt-1">
+                                  <CategoryBadge category={task.category} />
+                                </div>
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() => handleRestoreTask(task.id)}
+                                className="min-h-[32px] px-2.5 rounded-full text-[11px] font-bold text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 inline-flex items-center gap-1 shrink-0 transition-colors cursor-pointer"
+                              >
+                                <Icon.RotateCcw className="w-3 h-3" />
+                                <span>Restore</span>
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+
+                      <div className="pt-2 border-t border-zinc-800/80 flex justify-center">
+                        <button
+                          type="button"
+                          onClick={handleResetDemoData}
+                          className="text-[11px] font-bold text-zinc-500 hover:text-rose-400 underline underline-offset-2 py-1 px-2 cursor-pointer transition-colors"
+                        >
+                          Reset Demo Data
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </section>
+              </div>
+            </main>
+
+            {/* Mobile-Only Bottom Action Dock */}
+            <div className="md:hidden fixed bottom-0 inset-x-0 z-20 max-w-[420px] mx-auto px-5 py-4 bg-[#0F1117]/85 backdrop-blur-xl border-t border-zinc-800/80">
+              <button
+                type="button"
+                onClick={openAddSheet}
+                className="w-full min-h-[52px] rounded-full bg-gradient-to-r from-rose-500 via-orange-500 to-amber-500 hover:from-rose-600 hover:via-orange-600 hover:to-amber-600 active:scale-[0.99] text-white font-extrabold text-sm shadow-[0_10px_28px_-6px_rgba(244,63,94,0.45)] inline-flex items-center justify-center gap-2 transition-all cursor-pointer"
+              >
+                <Icon.Plus className="w-5 h-5" />
+                <span>Add Task</span>
+              </button>
+            </div>
+
+            {/* New Task Modal */}
+            {isSheetOpen && (
+              <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/70 backdrop-blur-[3px] md:p-4 transition-opacity" onClick={() => setIsSheetOpen(false)}>
+                <div role="dialog" aria-modal="true" aria-labelledby="new-task-sheet-title" onClick={(e) => e.stopPropagation()} className="w-full max-w-[420px] md:max-w-md bg-[#161922] rounded-t-[32px] md:rounded-[28px] border-t md:border border-zinc-800 px-6 pt-3 md:pt-6 pb-7 shadow-2xl space-y-4">
+                  <div className="flex md:hidden justify-center" aria-hidden="true"><div className="w-10 h-1.5 rounded-full bg-zinc-700" /></div>
+
+                  <div className="flex items-center justify-between">
+                    <h2 id="new-task-sheet-title" className="text-lg font-extrabold tracking-tight text-white">New Task</h2>
+                    <button type="button" onClick={() => setIsSheetOpen(false)} aria-label="Close modal" className="w-8 h-8 rounded-full bg-zinc-800 text-zinc-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer">
+                      <Icon.X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <form onSubmit={(e) => handleAddTask(e, 'backlog')} className="space-y-4">
+                    <div>
+                      <label htmlFor="triad-task-title" className="sr-only">Task title</label>
+                      <input
+                        id="triad-task-title"
+                        ref={titleInputRef}
+                        type="text"
+                        value={newTitle}
+                        onChange={(e) => setNewTitle(e.target.value)}
+                        placeholder="What do you want to tackle?"
+                        className="w-full min-h-[50px] px-4 rounded-2xl bg-[#0F1117] border border-zinc-800 text-sm font-bold text-white placeholder:text-zinc-500 focus:outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 transition-all"
+                      />
+                    </div>
+
+                    <div role="group" aria-label="Select task context" className="grid grid-cols-2 gap-3">
+                      <button
+                        type="button"
+                        aria-pressed={newCategory === 'Work'}
+                        onClick={() => setNewCategory('Work')}
+                        className={`min-h-[48px] px-4 rounded-2xl border text-xs font-extrabold inline-flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                          newCategory === 'Work' ? 'bg-gradient-to-r from-rose-500 to-orange-500 border-transparent text-white shadow-[0_6px_16px_rgba(244,63,94,0.3)]' : 'bg-[#0F1117] border-zinc-800 text-zinc-300 hover:border-zinc-700'
+                        }`}
+                      >
+                        <Icon.Briefcase className="w-4 h-4" />
+                        <span>Work</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        aria-pressed={newCategory === 'Personal'}
+                        onClick={() => setNewCategory('Personal')}
+                        className={`min-h-[48px] px-4 rounded-2xl border text-xs font-extrabold inline-flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                          newCategory === 'Personal' ? 'bg-gradient-to-r from-emerald-500 to-teal-500 border-transparent text-white shadow-[0_6px_16px_rgba(16,185,129,0.3)]' : 'bg-[#0F1117] border-zinc-800 text-zinc-300 hover:border-zinc-700'
+                        }`}
+                      >
+                        <Icon.Sparkles className="w-4 h-4" />
+                        <span>Personal</span>
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2.5 pt-1">
+                      <button type="submit" className="min-h-[48px] rounded-full bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-extrabold transition-colors cursor-pointer">
+                        Add to Queue
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={isLocked}
+                        onClick={() => handleAddTask(null, 'active')}
+                        className={`min-h-[48px] rounded-full text-xs font-extrabold inline-flex items-center justify-center gap-1.5 transition-all ${
+                          isLocked ? 'bg-zinc-800/80 text-zinc-500 cursor-not-allowed' : 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-400/30 cursor-pointer'
+                        }`}
+                      >
+                        {isLocked ? (
+                          <>
+                            <Icon.Lock className="w-3.5 h-3.5" />
+                            <span>Full (3/3)</span>
+                          </>
+                        ) : (
+                          <span>Focus Now</span>
+                        )}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+
+            {/* GitHub Cloud Sync Modal */}
+            {isSyncModalOpen && (
+              <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/70 backdrop-blur-[3px] md:p-4 transition-opacity" onClick={() => setIsSyncModalOpen(false)}>
+                <div role="dialog" aria-modal="true" aria-labelledby="sync-sheet-title" onClick={(e) => e.stopPropagation()} className="w-full max-w-[420px] md:max-w-md bg-[#161922] rounded-t-[32px] md:rounded-[28px] border-t md:border border-zinc-800 px-6 pt-3 md:pt-6 pb-7 shadow-2xl space-y-4">
+                  <div className="flex md:hidden justify-center" aria-hidden="true"><div className="w-10 h-1.5 rounded-full bg-zinc-700" /></div>
+
+                  <div className="flex items-center justify-between">
+                    <h2 id="sync-sheet-title" className="text-lg font-extrabold tracking-tight text-white">GitHub Cloud Sync</h2>
+                    <button type="button" onClick={() => setIsSyncModalOpen(false)} aria-label="Close modal" className="w-8 h-8 rounded-full bg-zinc-800 text-zinc-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer">
+                      <Icon.X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <p className="text-xs text-zinc-400 leading-relaxed">
+                    Sync tasks across your computer and phone using a private GitHub Gist with conflict-safe timestamp merging.
+                  </p>
+
+                  <form onSubmit={handleSaveSyncSettings} className="space-y-3">
+                    <div>
+                      <label className="block text-[11px] font-bold text-zinc-400 mb-1">GitHub Personal Access Token (gist scope)</label>
+                      <input
+                        type="password"
+                        value={tokenInput}
+                        onChange={(e) => setTokenInput(e.target.value)}
+                        placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                        className="w-full min-h-[44px] px-3.5 rounded-2xl bg-[#0F1117] border border-zinc-800 text-xs font-semibold text-white placeholder:text-zinc-600 focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-zinc-400 mb-1">Private Gist ID</label>
+                      <input
+                        type="text"
+                        value={gistIdInput}
+                        onChange={(e) => setGistIdInput(e.target.value)}
+                        placeholder="e.g. a1b2c3d4e5f6g7h8i9j0"
+                        className="w-full min-h-[44px] px-3.5 rounded-2xl bg-[#0F1117] border border-zinc-800 text-xs font-semibold text-white placeholder:text-zinc-600 focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+
+                    <div className="pt-1 flex gap-2">
+                      <button type="submit" className="flex-1 min-h-[46px] rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-xs font-extrabold cursor-pointer">
+                        Save & Sync Now
+                      </button>
+                      {isConfigured && (
+                        <button type="button" onClick={() => pushToGist(tasks, deletedIds, syncConfig)} className="px-4 min-h-[46px] rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-bold cursor-pointer">
+                          Push Local
+                        </button>
+                      )}
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
 </body>
 </html>
