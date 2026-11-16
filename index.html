@@ -37,6 +37,11 @@
       margin: 0;
       -webkit-tap-highlight-color: transparent;
     }
+    .no-callout {
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
   </style>
 </head>
 <body class="antialiased selection:bg-rose-500/30 selection:text-rose-200">
@@ -123,10 +128,14 @@
           <polyline points="18 15 12 9 6 15" />
         </svg>
       ),
-      ArrowUp: ({ className = 'w-3.5 h-3.5' }) => (
+      GripVertical: ({ className = 'w-4 h-4' }) => (
         <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round">
-          <line x1="12" y1="19" x2="12" y2="5" />
-          <polyline points="5 12 12 5 19 12" />
+          <circle cx="9" cy="12" r="1" />
+          <circle cx="9" cy="5" r="1" />
+          <circle cx="9" cy="19" r="1" />
+          <circle cx="15" cy="12" r="1" />
+          <circle cx="15" cy="5" r="1" />
+          <circle cx="15" cy="19" r="1" />
         </svg>
       ),
       ArrowRight: ({ className = 'w-3.5 h-3.5' }) => (
@@ -324,7 +333,7 @@
         } catch {}
         return { token: '', gistId: '' };
       });
-      const [syncStatus, setSyncStatus] = useState('idle'); // 'idle' | 'syncing' | 'synced' | 'error'
+      const [syncStatus, setSyncStatus] = useState('idle');
       const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
       const [tokenInput, setTokenInput] = useState(syncConfig.token || '');
       const [gistIdInput, setGistIdInput] = useState(syncConfig.gistId || '');
@@ -341,10 +350,123 @@
       const [toast, setToast] = useState('');
       const [shakeMeter, setShakeMeter] = useState(false);
 
+      // Press-and-Hold Drag Reorder State
+      const [dragState, setDragState] = useState(null); // { id, section, offsetY }
+      const holdTimerRef = useRef(null);
+      const dragMetaRef = useRef(null);
+
       const titleInputRef = useRef(null);
       const formattedDate = useMemo(() => formatHeaderDate(), []);
 
       const triggerToast = useCallback((message) => setToast(message), []);
+
+      // Reorder two items in the same section ('active' or 'backlog')
+      const reorderItems = useCallback((draggedId, targetId) => {
+        if (!draggedId || !targetId || draggedId === targetId) return;
+        setTasks((prev) => {
+          const fromIdx = prev.findIndex((t) => t.id === draggedId);
+          const toIdx = prev.findIndex((t) => t.id === targetId);
+          if (fromIdx === -1 || toIdx === -1) return prev;
+          if (prev[fromIdx].status !== prev[toIdx].status) return prev;
+
+          const updated = [...prev];
+          const [moved] = updated.splice(fromIdx, 1);
+          updated.splice(toIdx, 0, moved);
+          return updated;
+        });
+      }, []);
+
+      // Press-and-hold pointer start (220ms hold threshold so normal scrolling still works smoothly)
+      const handleCardPointerDown = (e, task, section) => {
+        if (e.button !== undefined && e.button !== 0) return;
+        if (e.target.closest('button')) return;
+
+        const startX = e.clientX;
+        const startY = e.clientY;
+
+        if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
+
+        dragMetaRef.current = {
+          id: task.id,
+          section,
+          startX,
+          startY,
+          lastY: startY,
+          isDragging: false,
+        };
+
+        holdTimerRef.current = setTimeout(() => {
+          if (!dragMetaRef.current || dragMetaRef.current.id !== task.id) return;
+          dragMetaRef.current.isDragging = true;
+          if (typeof navigator !== 'undefined' && navigator.vibrate) {
+            navigator.vibrate(25);
+          }
+          setDragState({ id: task.id, section, offsetY: 0 });
+        }, 220);
+      };
+
+      // Global pointer move & release listeners while holding/dragging
+      useEffect(() => {
+        const handleWindowPointerMove = (e) => {
+          const meta = dragMetaRef.current;
+          if (!meta) return;
+
+          if (!meta.isDragging) {
+            // Cancel hold if user starts scrolling before 220ms
+            if (
+              Math.abs(e.clientY - meta.startY) > 10 ||
+              Math.abs(e.clientX - meta.startX) > 10
+            ) {
+              clearTimeout(holdTimerRef.current);
+              dragMetaRef.current = null;
+            }
+            return;
+          }
+
+          e.preventDefault();
+          const deltaY = e.clientY - meta.lastY;
+          setDragState((prev) =>
+            prev ? { ...prev, offsetY: deltaY } : null
+          );
+
+          // Find which card in the same section is under the finger/cursor
+          const elements = document.elementsFromPoint(e.clientX, e.clientY);
+          const targetCard = elements.find(
+            (el) =>
+              el.dataset &&
+              el.dataset.dragId &&
+              el.dataset.dragSection === meta.section &&
+              el.dataset.dragId !== meta.id
+          );
+
+          if (targetCard) {
+            const targetId = targetCard.dataset.dragId;
+            reorderItems(meta.id, targetId);
+            meta.lastY = e.clientY;
+            setDragState({ id: meta.id, section: meta.section, offsetY: 0 });
+          }
+        };
+
+        const handleWindowPointerEnd = () => {
+          if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
+          if (dragMetaRef.current?.isDragging) {
+            setDragState(null);
+          }
+          dragMetaRef.current = null;
+        };
+
+        window.addEventListener('pointermove', handleWindowPointerMove, {
+          passive: false,
+        });
+        window.addEventListener('pointerup', handleWindowPointerEnd);
+        window.addEventListener('pointercancel', handleWindowPointerEnd);
+
+        return () => {
+          window.removeEventListener('pointermove', handleWindowPointerMove);
+          window.removeEventListener('pointerup', handleWindowPointerEnd);
+          window.removeEventListener('pointercancel', handleWindowPointerEnd);
+        };
+      }, [reorderItems]);
 
       // Pull latest tasks from GitHub Gist
       const pullFromGist = useCallback(
@@ -418,7 +540,6 @@
         [syncConfig]
       );
 
-      // Pull on initial load & whenever app returns to foreground
       useEffect(() => {
         if (!isConfigured) return;
         pullFromGist(syncConfig, true);
@@ -433,7 +554,7 @@
           document.removeEventListener('visibilitychange', handleVisibility);
       }, [isConfigured, syncConfig, pullFromGist]);
 
-      // Save locally & push debounced changes to GitHub Gist
+      // Save locally & push debounced changes (waits until drag finishes)
       useEffect(() => {
         try {
           window.localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
@@ -441,7 +562,7 @@
           console.error('Failed to save tasks:', err);
         }
 
-        if (!isConfigured) return;
+        if (!isConfigured || dragState) return;
         if (skipNextPushRef.current) {
           skipNextPushRef.current = false;
           return;
@@ -451,7 +572,7 @@
           pushToGist(tasks, syncConfig);
         }, 650);
         return () => clearTimeout(timer);
-      }, [tasks, isConfigured, syncConfig, pushToGist]);
+      }, [tasks, isConfigured, syncConfig, pushToGist, dragState]);
 
       useEffect(() => {
         if (isSheetOpen) {
@@ -636,32 +757,6 @@
         triggerToast('Moved to Focus Now');
       };
 
-      const handleMoveUpInQueue = (id) => {
-        setTasks((prev) => {
-          const backlogItems = prev.filter((t) => t.status === 'backlog');
-          const visibleIds =
-            filter === 'All'
-              ? backlogItems.map((t) => t.id)
-              : backlogItems
-                  .filter((t) => t.category === filter)
-                  .map((t) => t.id);
-
-          const visibleIdx = visibleIds.indexOf(id);
-          if (visibleIdx <= 0) return prev;
-
-          const swapTargetId = visibleIds[visibleIdx - 1];
-          const idxA = prev.findIndex((t) => t.id === id);
-          const idxB = prev.findIndex((t) => t.id === swapTargetId);
-          if (idxA === -1 || idxB === -1) return prev;
-
-          const copy = [...prev];
-          const temp = copy[idxA];
-          copy[idxA] = copy[idxB];
-          copy[idxB] = temp;
-          return copy;
-        });
-      };
-
       const handleDeleteTask = (id) => {
         setTasks((prev) => prev.filter((t) => t.id !== id));
         triggerToast('Task removed');
@@ -758,7 +853,7 @@
                   </div>
                 </div>
 
-                {/* Desktop Filter Pills (Centered on Desktop Header) */}
+                {/* Desktop Filter Pills */}
                 <div
                   role="group"
                   aria-label="Filter tasks by context"
@@ -811,7 +906,7 @@
                   })}
                 </div>
 
-                {/* Right Header Controls: Slot Meter + Desktop Add Button */}
+                {/* Right Header Controls */}
                 <div className="flex items-center gap-3">
                   <PlayfulSlotMeter
                     activeTasks={allActive}
@@ -830,7 +925,7 @@
                 </div>
               </div>
 
-              {/* Mobile Filter Pills (Shown below title on Phone) */}
+              {/* Mobile Filter Pills */}
               <div
                 role="group"
                 aria-label="Filter tasks by context"
@@ -894,7 +989,7 @@
               </div>
             )}
 
-            {/* Main Content: Single-Column on Phone, 2-Column Split on Desktop */}
+            {/* Main Content */}
             <main className="flex-1 overflow-y-auto px-5 md:px-8 pt-5 md:pt-8 pb-28 md:pb-10 grid grid-cols-1 md:grid-cols-12 gap-7 md:gap-8 items-start">
               {/* Left Column on Desktop: FOCUS NOW (MAX 3) */}
               <section
@@ -902,12 +997,19 @@
                 className="md:col-span-6 lg:col-span-6 md:sticky md:top-0"
               >
                 <div className="flex flex-wrap items-center justify-between gap-2 mb-3.5">
-                  <h2
-                    id="focus-now-heading"
-                    className="text-[11px] font-extrabold uppercase tracking-[0.09em] text-zinc-400"
-                  >
-                    Focus Now (Max 3)
-                  </h2>
+                  <div className="flex items-center gap-2">
+                    <h2
+                      id="focus-now-heading"
+                      className="text-[11px] font-extrabold uppercase tracking-[0.09em] text-zinc-400"
+                    >
+                      Focus Now (Max 3)
+                    </h2>
+                    {visibleActive.length > 1 && (
+                      <span className="text-[10px] font-semibold text-zinc-600">
+                        • Hold to reorder
+                      </span>
+                    )}
+                  </div>
 
                   {isLocked && (
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/15 border border-amber-400/30 text-amber-300 text-[11px] font-bold">
@@ -921,17 +1023,45 @@
                   {visibleActive.map((task) => {
                     const isWork = task.category === 'Work';
                     const isPopping = completingId === task.id;
+                    const isDragging = dragState?.id === task.id;
 
                     return (
                       <article
                         key={task.id}
-                        className={`group relative overflow-hidden rounded-3xl border transition-all duration-200 ${
+                        data-drag-id={task.id}
+                        data-drag-section="active"
+                        onPointerDown={(e) =>
+                          handleCardPointerDown(e, task, 'active')
+                        }
+                        style={
+                          isDragging
+                            ? {
+                                transform: `translateY(${Math.max(
+                                  -24,
+                                  Math.min(24, dragState.offsetY)
+                                )}px) scale(1.025)`,
+                                zIndex: 30,
+                              }
+                            : undefined
+                        }
+                        className={`no-callout group relative overflow-hidden rounded-3xl border cursor-grab active:cursor-grabbing ${
+                          isDragging
+                            ? 'ring-2 ring-amber-400/80 shadow-[0_20px_40px_rgba(0,0,0,0.75)] transition-shadow'
+                            : 'transition-all duration-200'
+                        } ${
                           isWork
                             ? 'bg-gradient-to-r from-rose-500/[0.12] via-[#171A23] to-[#171A23] border-rose-500/30 shadow-[0_8px_22px_-8px_rgba(244,63,94,0.28)]'
                             : 'bg-gradient-to-r from-emerald-500/[0.12] via-[#171A23] to-[#171A23] border-emerald-500/30 shadow-[0_8px_22px_-8px_rgba(16,185,129,0.28)]'
                         } ${isPopping ? 'scale-[0.96] opacity-40' : ''}`}
                       >
-                        <div className="flex items-center gap-3.5 px-4 md:px-5 py-4 md:py-5">
+                        <div className="flex items-center gap-3 px-3.5 md:px-4 py-4 md:py-5">
+                          <span
+                            aria-hidden="true"
+                            className="text-zinc-600 group-hover:text-zinc-400 transition-colors shrink-0"
+                          >
+                            <Icon.GripVertical className="w-4 h-4" />
+                          </span>
+
                           <button
                             type="button"
                             onClick={() => handleCompleteTask(task.id)}
@@ -1008,12 +1138,19 @@
               <div className="md:col-span-6 lg:col-span-6 space-y-6">
                 <section aria-labelledby="up-next-heading">
                   <div className="flex items-center justify-between mb-3.5">
-                    <h2
-                      id="up-next-heading"
-                      className="text-[11px] font-extrabold uppercase tracking-[0.09em] text-zinc-400"
-                    >
-                      Up Next ({visibleQueue.length})
-                    </h2>
+                    <div className="flex items-center gap-2">
+                      <h2
+                        id="up-next-heading"
+                        className="text-[11px] font-extrabold uppercase tracking-[0.09em] text-zinc-400"
+                      >
+                        Up Next ({visibleQueue.length})
+                      </h2>
+                      {visibleQueue.length > 1 && (
+                        <span className="text-[10px] font-semibold text-zinc-600">
+                          • Hold to reorder
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   {visibleQueue.length === 0 ? (
@@ -1030,26 +1167,42 @@
                     </div>
                   ) : (
                     <ul className="space-y-2.5">
-                      {visibleQueue.map((task, idx) => {
+                      {visibleQueue.map((task) => {
                         const isWork = task.category === 'Work';
+                        const isDragging = dragState?.id === task.id;
+
                         return (
                           <li
                             key={task.id}
-                            className="bg-[#161922] rounded-2xl border border-zinc-800/90 px-3.5 md:px-4 py-3 md:py-3.5 shadow-[0_2px_8px_rgba(0,0,0,0.25)] flex items-center gap-2.5 transition-all hover:border-zinc-700"
+                            data-drag-id={task.id}
+                            data-drag-section="backlog"
+                            onPointerDown={(e) =>
+                              handleCardPointerDown(e, task, 'backlog')
+                            }
+                            style={
+                              isDragging
+                                ? {
+                                    transform: `translateY(${Math.max(
+                                      -24,
+                                      Math.min(24, dragState.offsetY)
+                                    )}px) scale(1.025)`,
+                                    zIndex: 30,
+                                  }
+                                : undefined
+                            }
+                            className={`no-callout group relative bg-[#161922] rounded-2xl border px-3 md:px-3.5 py-3 md:py-3.5 flex items-center gap-2.5 cursor-grab active:cursor-grabbing ${
+                              isDragging
+                                ? 'border-amber-400/80 ring-2 ring-amber-400/50 shadow-[0_18px_36px_rgba(0,0,0,0.75)] transition-shadow'
+                                : 'border-zinc-800/90 shadow-[0_2px_8px_rgba(0,0,0,0.25)] hover:border-zinc-700 transition-all'
+                            }`}
                           >
-                            <button
-                              type="button"
-                              disabled={idx === 0}
-                              onClick={() => handleMoveUpInQueue(task.id)}
-                              aria-label={`Move "${task.title}" higher in queue`}
-                              className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 transition-colors ${
-                                idx === 0
-                                  ? 'text-zinc-700 cursor-default'
-                                  : 'text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 cursor-pointer'
-                              }`}
+                            {/* Drag Grip Indicator */}
+                            <span
+                              aria-hidden="true"
+                              className="text-zinc-600 group-hover:text-zinc-400 transition-colors shrink-0"
                             >
-                              <Icon.ArrowUp className="w-3.5 h-3.5" />
-                            </button>
+                              <Icon.GripVertical className="w-4 h-4" />
+                            </span>
 
                             <div className="flex-1 min-w-0">
                               <p className="text-[14px] font-bold text-zinc-100 leading-snug tracking-[-0.01em] break-words">
@@ -1183,7 +1336,7 @@
               </button>
             </div>
 
-            {/* New Task Modal (Bottom Sheet on Phone, Centered Dialog on Desktop) */}
+            {/* New Task Modal */}
             {isSheetOpen && (
               <div
                 className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/70 backdrop-blur-[3px] md:p-4 transition-opacity"
@@ -1303,7 +1456,7 @@
               </div>
             )}
 
-            {/* GitHub Cloud Sync Modal (Bottom Sheet on Phone, Centered Dialog on Desktop) */}
+            {/* GitHub Cloud Sync Modal */}
             {isSyncModalOpen && (
               <div
                 className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/70 backdrop-blur-[3px] md:p-4 transition-opacity"
