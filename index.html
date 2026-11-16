@@ -354,7 +354,16 @@
       const titleInputRef = useRef(null);
       const holdTimerRef = useRef(null);
       const dragMetaRef = useRef(null);
+      const cardElsRef = useRef(new Map());
       const formattedDate = useMemo(() => formatHeaderDate(), []);
+
+      const registerCardEl = useCallback((id, el) => {
+        if (el) {
+          cardElsRef.current.set(id, el);
+        } else {
+          cardElsRef.current.delete(id);
+        }
+      }, []);
 
       const triggerToast = useCallback((message) => {
         setToast(message);
@@ -374,10 +383,23 @@
         });
       }, []);
 
-      // Press-and-hold pointer start (180ms hold threshold so normal scrolling still works smoothly)
-      const handleCardPointerDown = (e, task, section) => {
+      // Start active drag state immediately (0ms on grip handle, 160ms hold on card body)
+      const activateDrag = useCallback((task, section, startY) => {
+        if (!dragMetaRef.current || dragMetaRef.current.id !== task.id) return;
+        dragMetaRef.current.isDragging = true;
+        dragMetaRef.current.anchorY = startY;
+        document.body.style.overflow = 'hidden';
+        document.body.style.touchAction = 'none';
+        if (typeof navigator !== 'undefined' && navigator.vibrate) {
+          navigator.vibrate(20);
+        }
+        setDragState({ id: task.id, section });
+      }, []);
+
+      const handleCardPointerDown = (e, task, section, immediate = false) => {
         if (e.button !== undefined && e.button !== 0) return;
-        if (e.target.closest('button')) return;
+        if (!immediate && e.target.closest('button')) return;
+        if (immediate) e.stopPropagation();
 
         const startX = e.clientX;
         const startY = e.clientY;
@@ -389,48 +411,75 @@
           section,
           startX,
           startY,
-          lastY: startY,
+          anchorY: startY,
           isDragging: false,
         };
 
-        holdTimerRef.current = setTimeout(() => {
-          if (!dragMetaRef.current || dragMetaRef.current.id !== task.id) return;
-          dragMetaRef.current.isDragging = true;
-          document.body.style.overflow = 'hidden';
-          document.body.style.touchAction = 'none';
-          if (typeof navigator !== 'undefined' && navigator.vibrate) {
-            navigator.vibrate(25);
-          }
-          setDragState({ id: task.id, section, offsetY: 0 });
-        }, 180);
+        if (immediate) {
+          activateDrag(task, section, startY);
+        } else {
+          holdTimerRef.current = setTimeout(() => {
+            activateDrag(task, section, startY);
+          }, 160);
+        }
       };
 
-      // Global pointer & touch move/release listeners while holding/dragging
+      // Smooth 60fps GPU transform + midpoint swap detection (zero React re-renders per pixel)
       useEffect(() => {
-        const updateDragPosition = (clientX, clientY) => {
+        const updateDragPosition = (clientY) => {
           const meta = dragMetaRef.current;
           if (!meta || !meta.isDragging) return;
 
-          const deltaY = clientY - meta.lastY;
-          setDragState((prev) =>
-            prev ? { ...prev, offsetY: deltaY } : null
-          );
+          const activeEl = cardElsRef.current.get(meta.id);
+          if (activeEl) {
+            const dy = clientY - meta.anchorY;
+            activeEl.style.transform = `translate3d(0, ${dy}px, 0) scale(1.025)`;
+          }
 
-          // Find which card in the same section is under the finger/cursor
-          const elements = document.elementsFromPoint(clientX, clientY);
-          const targetCard = elements.find(
-            (el) =>
-              el.dataset &&
-              el.dataset.dragId &&
-              el.dataset.dragSection === meta.section &&
-              el.dataset.dragId !== meta.id
-          );
+          // Gather all sibling cards in the same section sorted top-to-bottom
+          const siblings = [];
+          cardElsRef.current.forEach((el, id) => {
+            if (el.dataset.dragSection === meta.section) {
+              const rect = el.getBoundingClientRect();
+              siblings.push({ id, el, midY: rect.top + rect.height / 2 });
+            }
+          });
+          siblings.sort((a, b) => a.midY - b.midY);
 
-          if (targetCard) {
-            const targetId = targetCard.dataset.dragId;
-            reorderItems(meta.id, targetId);
-            meta.lastY = clientY;
-            setDragState({ id: meta.id, section: meta.section, offsetY: 0 });
+          const currentIdx = siblings.findIndex((s) => s.id === meta.id);
+          if (currentIdx === -1) return;
+
+          // Swap with item above when finger crosses above its midpoint
+          if (currentIdx > 0 && clientY < siblings[currentIdx - 1].midY) {
+            const target = siblings[currentIdx - 1];
+            const prevTop = activeEl ? activeEl.getBoundingClientRect().top : 0;
+            reorderItems(meta.id, target.id);
+            requestAnimationFrame(() => {
+              const el = cardElsRef.current.get(meta.id);
+              if (el && dragMetaRef.current?.id === meta.id) {
+                const newTop = el.getBoundingClientRect().top;
+                dragMetaRef.current.anchorY += newTop - prevTop;
+                const dy = clientY - dragMetaRef.current.anchorY;
+                el.style.transform = `translate3d(0, ${dy}px, 0) scale(1.025)`;
+              }
+            });
+          } else if (
+            // Swap with item below when finger crosses below its midpoint
+            currentIdx < siblings.length - 1 &&
+            clientY > siblings[currentIdx + 1].midY
+          ) {
+            const target = siblings[currentIdx + 1];
+            const prevTop = activeEl ? activeEl.getBoundingClientRect().top : 0;
+            reorderItems(meta.id, target.id);
+            requestAnimationFrame(() => {
+              const el = cardElsRef.current.get(meta.id);
+              if (el && dragMetaRef.current?.id === meta.id) {
+                const newTop = el.getBoundingClientRect().top;
+                dragMetaRef.current.anchorY += newTop - prevTop;
+                const dy = clientY - dragMetaRef.current.anchorY;
+                el.style.transform = `translate3d(0, ${dy}px, 0) scale(1.025)`;
+              }
+            });
           }
         };
 
@@ -439,7 +488,6 @@
           if (!meta) return;
 
           if (!meta.isDragging) {
-            // Cancel hold if user starts scrolling before 180ms
             if (
               Math.abs(e.clientY - meta.startY) > 10 ||
               Math.abs(e.clientX - meta.startX) > 10
@@ -451,22 +499,25 @@
           }
 
           if (e.cancelable) e.preventDefault();
-          updateDragPosition(e.clientX, e.clientY);
+          updateDragPosition(e.clientY);
         };
 
-        // Explicit non-passive touchmove prevents mobile browser page scroll once grabbed
         const handleWindowTouchMove = (e) => {
           const meta = dragMetaRef.current;
           if (!meta || !meta.isDragging) return;
           if (e.cancelable) e.preventDefault();
           if (e.touches && e.touches[0]) {
-            updateDragPosition(e.touches[0].clientX, e.touches[0].clientY);
+            updateDragPosition(e.touches[0].clientY);
           }
         };
 
         const handleWindowPointerEnd = () => {
           if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
           if (dragMetaRef.current?.isDragging) {
+            const activeEl = cardElsRef.current.get(dragMetaRef.current.id);
+            if (activeEl) {
+              activeEl.style.transform = '';
+            }
             document.body.style.overflow = '';
             document.body.style.touchAction = '';
             setDragState(null);
@@ -1055,26 +1106,24 @@
                     return (
                       <article
                         key={task.id}
+                        ref={(el) => registerCardEl(task.id, el)}
                         data-drag-id={task.id}
                         data-drag-section="active"
                         onPointerDown={(e) =>
-                          handleCardPointerDown(e, task, 'active')
+                          handleCardPointerDown(e, task, 'active', false)
                         }
                         style={
                           isDragging
                             ? {
-                                transform: `translateY(${Math.max(
-                                  -24,
-                                  Math.min(24, dragState.offsetY)
-                                )}px) scale(1.025)`,
                                 zIndex: 30,
                                 touchAction: 'none',
+                                willChange: 'transform',
                               }
                             : { touchAction: 'pan-y' }
                         }
-                        className={`no-callout group relative overflow-hidden rounded-3xl border cursor-grab active:cursor-grabbing ${
+                        className={`no-callout group relative overflow-hidden rounded-3xl border select-none ${
                           isDragging
-                            ? 'ring-2 ring-amber-400/80 shadow-[0_20px_40px_rgba(0,0,0,0.75)] transition-shadow'
+                            ? 'ring-2 ring-amber-400/90 shadow-[0_22px_44px_rgba(0,0,0,0.8)]'
                             : 'transition-all duration-200'
                         } ${
                           isWork
@@ -1082,10 +1131,14 @@
                             : 'bg-gradient-to-r from-emerald-500/[0.12] via-[#171A23] to-[#171A23] border-emerald-500/30 shadow-[0_8px_22px_-8px_rgba(16,185,129,0.28)]'
                         } ${isPopping ? 'scale-[0.96] opacity-40' : ''}`}
                       >
-                        <div className="flex items-center gap-3 px-3.5 md:px-4 py-4 md:py-5">
+                        <div className="flex items-center gap-2.5 px-3 md:px-4 py-4 md:py-5">
                           <span
-                            aria-hidden="true"
-                            className="text-zinc-600 group-hover:text-zinc-400 transition-colors shrink-0"
+                            onPointerDown={(e) =>
+                              handleCardPointerDown(e, task, 'active', true)
+                            }
+                            style={{ touchAction: 'none' }}
+                            title="Drag to reorder"
+                            className="p-1.5 -ml-1 text-zinc-500 hover:text-zinc-200 active:text-amber-400 cursor-grab active:cursor-grabbing transition-colors shrink-0"
                           >
                             <Icon.GripVertical className="w-4 h-4" />
                           </span>
@@ -1202,33 +1255,35 @@
                         return (
                           <li
                             key={task.id}
+                            ref={(el) => registerCardEl(task.id, el)}
                             data-drag-id={task.id}
                             data-drag-section="backlog"
                             onPointerDown={(e) =>
-                              handleCardPointerDown(e, task, 'backlog')
+                              handleCardPointerDown(e, task, 'backlog', false)
                             }
                             style={
                               isDragging
                                 ? {
-                                    transform: `translateY(${Math.max(
-                                      -24,
-                                      Math.min(24, dragState.offsetY)
-                                    )}px) scale(1.025)`,
                                     zIndex: 30,
                                     touchAction: 'none',
+                                    willChange: 'transform',
                                   }
                                 : { touchAction: 'pan-y' }
                             }
-                            className={`no-callout group relative bg-[#161922] rounded-2xl border px-3 md:px-3.5 py-3 md:py-3.5 flex items-center gap-2.5 cursor-grab active:cursor-grabbing ${
+                            className={`no-callout group relative bg-[#161922] rounded-2xl border px-2.5 md:px-3.5 py-3 md:py-3.5 flex items-center gap-2 select-none ${
                               isDragging
-                                ? 'border-amber-400/80 ring-2 ring-amber-400/50 shadow-[0_18px_36px_rgba(0,0,0,0.75)] transition-shadow'
+                                ? 'border-amber-400/90 ring-2 ring-amber-400/60 shadow-[0_20px_40px_rgba(0,0,0,0.8)]'
                                 : 'border-zinc-800/90 shadow-[0_2px_8px_rgba(0,0,0,0.25)] hover:border-zinc-700 transition-all'
                             }`}
                           >
-                            {/* Drag Grip Indicator */}
+                            {/* Instant-Grab Drag Grip Handle */}
                             <span
-                              aria-hidden="true"
-                              className="text-zinc-600 group-hover:text-zinc-400 transition-colors shrink-0"
+                              onPointerDown={(e) =>
+                                handleCardPointerDown(e, task, 'backlog', true)
+                              }
+                              style={{ touchAction: 'none' }}
+                              title="Drag to reorder"
+                              className="p-1.5 -ml-0.5 text-zinc-500 hover:text-zinc-200 active:text-amber-400 cursor-grab active:cursor-grabbing transition-colors shrink-0"
                             >
                               <Icon.GripVertical className="w-4 h-4" />
                             </span>
