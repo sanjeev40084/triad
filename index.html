@@ -1,4 +1,4 @@
-
+<!DOCTYPE html>
 <html lang="en" class="dark">
 <head>
   <meta charset="UTF-8" />
@@ -689,23 +689,23 @@
       };
 
       return (
-        <div className="min-h-screen bg-[#07080B] sm:py-8 px-0 sm:px-4 flex items-center justify-center">
-          <div className="relative w-full max-w-[420px] min-h-screen sm:min-h-[780px] sm:max-h-[860px] bg-[#0F1117] sm:rounded-[38px] sm:border sm:border-zinc-800/90 sm:shadow-[0_28px_70px_-15px_rgba(0,0,0,0.85)] flex flex-col overflow-hidden">
+        <div className="min-h-screen bg-[#07080B] md:py-8 md:px-6 lg:px-10 flex items-start justify-center">
+          <div className="relative w-full max-w-[420px] md:max-w-5xl min-h-screen md:min-h-[760px] bg-[#0F1117] md:rounded-[36px] md:border md:border-zinc-800/90 md:shadow-[0_28px_70px_-15px_rgba(0,0,0,0.85)] flex flex-col overflow-hidden">
             <div
               aria-hidden="true"
-              className="pointer-events-none absolute -top-24 -right-16 w-60 h-60 rounded-full bg-gradient-to-br from-rose-500/15 via-amber-500/10 to-emerald-500/10 blur-3xl"
+              className="pointer-events-none absolute -top-24 -right-16 w-60 md:w-96 h-60 md:h-96 rounded-full bg-gradient-to-br from-rose-500/15 via-amber-500/10 to-emerald-500/10 blur-3xl"
             />
 
             {/* Sticky Header */}
-            <header className="sticky top-0 z-20 bg-[#0F1117]/85 backdrop-blur-xl px-5 pt-5 pb-4 border-b border-zinc-800/80">
-              <div className="flex items-center justify-between gap-2 mb-4">
+            <header className="sticky top-0 z-20 bg-[#0F1117]/85 backdrop-blur-xl px-5 md:px-8 pt-5 md:pt-7 pb-4 md:pb-5 border-b border-zinc-800/80">
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-4 md:mb-0">
                 <div>
                   <div className="inline-flex items-center gap-1.5 text-[11px] font-bold tracking-[0.09em] text-amber-300/85 uppercase">
                     <Icon.Moon className="w-3.5 h-3.5 text-amber-400" />
                     <span>{formattedDate}</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <h1 className="text-[28px] font-extrabold tracking-[-0.03em] text-white leading-tight">
+                  <div className="flex items-center gap-2.5">
+                    <h1 className="text-[28px] md:text-[32px] font-extrabold tracking-[-0.03em] text-white leading-tight">
                       Triad
                     </h1>
 
@@ -758,17 +758,83 @@
                   </div>
                 </div>
 
-                <PlayfulSlotMeter
-                  activeTasks={allActive}
-                  isLocked={isLocked}
-                  isShaking={shakeMeter}
-                />
+                {/* Desktop Filter Pills (Centered on Desktop Header) */}
+                <div
+                  role="group"
+                  aria-label="Filter tasks by context"
+                  className="hidden md:grid grid-cols-3 gap-1.5 p-1.5 rounded-2xl bg-zinc-900 border border-zinc-800/80 min-w-[320px]"
+                >
+                  {[
+                    {
+                      id: 'All',
+                      activeStyle: 'bg-zinc-100 text-zinc-950 shadow-sm',
+                      badgeStyle: 'bg-zinc-900/15 text-zinc-900',
+                    },
+                    {
+                      id: 'Work',
+                      activeStyle:
+                        'bg-gradient-to-r from-rose-500 to-orange-500 text-white shadow-[0_4px_14px_rgba(244,63,94,0.35)]',
+                      badgeStyle: 'bg-black/20 text-white',
+                    },
+                    {
+                      id: 'Personal',
+                      activeStyle:
+                        'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-[0_4px_14px_rgba(16,185,129,0.35)]',
+                      badgeStyle: 'bg-black/20 text-white',
+                    },
+                  ].map((tab) => {
+                    const isSelected = filter === tab.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        aria-pressed={isSelected}
+                        onClick={() => handleFilterChange(tab.id)}
+                        className={`min-h-[38px] px-4 rounded-xl text-xs font-bold inline-flex items-center justify-center gap-1.5 transition-all duration-200 cursor-pointer focus:outline-none ${
+                          isSelected
+                            ? tab.activeStyle
+                            : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/70'
+                        }`}
+                      >
+                        <span>{tab.id}</span>
+                        <span
+                          className={`px-1.5 py-0.2 rounded-full text-[10px] tabular-nums ${
+                            isSelected
+                              ? tab.badgeStyle
+                              : 'bg-zinc-800 text-zinc-400'
+                          }`}
+                        >
+                          {filterCounts[tab.id]}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Right Header Controls: Slot Meter + Desktop Add Button */}
+                <div className="flex items-center gap-3">
+                  <PlayfulSlotMeter
+                    activeTasks={allActive}
+                    isLocked={isLocked}
+                    isShaking={shakeMeter}
+                  />
+
+                  <button
+                    type="button"
+                    onClick={openAddSheet}
+                    className="hidden md:inline-flex min-h-[44px] px-5 rounded-2xl bg-gradient-to-r from-rose-500 via-orange-500 to-amber-500 hover:from-rose-600 hover:via-orange-600 hover:to-amber-600 active:scale-[0.98] text-white font-extrabold text-xs shadow-[0_8px_22px_-6px_rgba(244,63,94,0.45)] items-center justify-center gap-2 transition-all cursor-pointer"
+                  >
+                    <Icon.Plus className="w-4 h-4" />
+                    <span>Add Task</span>
+                  </button>
+                </div>
               </div>
 
+              {/* Mobile Filter Pills (Shown below title on Phone) */}
               <div
                 role="group"
                 aria-label="Filter tasks by context"
-                className="grid grid-cols-3 gap-1.5 p-1.5 rounded-2xl bg-zinc-900 border border-zinc-800/80"
+                className="grid md:hidden grid-cols-3 gap-1.5 p-1.5 rounded-2xl bg-zinc-900 border border-zinc-800/80"
               >
                 {[
                   {
@@ -822,16 +888,20 @@
               <div
                 role="status"
                 aria-live="polite"
-                className="pointer-events-none absolute top-32 left-1/2 -translate-x-1/2 z-40 w-max max-w-[90%] px-4 py-2 rounded-full bg-zinc-100 text-zinc-950 text-xs font-bold shadow-[0_10px_25px_rgba(0,0,0,0.6)] transition-all"
+                className="pointer-events-none fixed md:absolute top-32 md:top-24 left-1/2 -translate-x-1/2 z-40 w-max max-w-[90%] px-4 py-2 rounded-full bg-zinc-100 text-zinc-950 text-xs font-bold shadow-[0_10px_25px_rgba(0,0,0,0.6)] transition-all"
               >
                 {toast}
               </div>
             )}
 
-            {/* Main Content */}
-            <main className="flex-1 overflow-y-auto px-5 pt-5 pb-28 space-y-7">
-              <section aria-labelledby="focus-now-heading">
-                <div className="flex items-center justify-between gap-2 mb-3">
+            {/* Main Content: Single-Column on Phone, 2-Column Split on Desktop */}
+            <main className="flex-1 overflow-y-auto px-5 md:px-8 pt-5 md:pt-8 pb-28 md:pb-10 grid grid-cols-1 md:grid-cols-12 gap-7 md:gap-8 items-start">
+              {/* Left Column on Desktop: FOCUS NOW (MAX 3) */}
+              <section
+                aria-labelledby="focus-now-heading"
+                className="md:col-span-6 lg:col-span-6 md:sticky md:top-0"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-3.5">
                   <h2
                     id="focus-now-heading"
                     className="text-[11px] font-extrabold uppercase tracking-[0.09em] text-zinc-400"
@@ -847,7 +917,7 @@
                   )}
                 </div>
 
-                <div className="space-y-3">
+                <div className="space-y-3 md:space-y-3.5">
                   {visibleActive.map((task) => {
                     const isWork = task.category === 'Work';
                     const isPopping = completingId === task.id;
@@ -861,7 +931,7 @@
                             : 'bg-gradient-to-r from-emerald-500/[0.12] via-[#171A23] to-[#171A23] border-emerald-500/30 shadow-[0_8px_22px_-8px_rgba(16,185,129,0.28)]'
                         } ${isPopping ? 'scale-[0.96] opacity-40' : ''}`}
                       >
-                        <div className="flex items-center gap-3.5 px-4 py-4">
+                        <div className="flex items-center gap-3.5 px-4 md:px-5 py-4 md:py-5">
                           <button
                             type="button"
                             onClick={() => handleCompleteTask(task.id)}
@@ -878,7 +948,7 @@
                           </button>
 
                           <div className="flex-1 min-w-0">
-                            <h3 className="text-[15px] font-bold text-zinc-50 leading-snug tracking-[-0.01em] break-words">
+                            <h3 className="text-[15px] md:text-[16px] font-bold text-zinc-50 leading-snug tracking-[-0.01em] break-words">
                               {task.title}
                             </h3>
                             <div className="mt-1.5">
@@ -920,7 +990,7 @@
                     return (
                       <div
                         key={`open-slot-${slotNumber}`}
-                        className="rounded-3xl border-2 border-dashed border-zinc-800 bg-zinc-900/40 px-4 py-4 flex items-center gap-3"
+                        className="rounded-3xl border-2 border-dashed border-zinc-800 bg-zinc-900/40 px-4 md:px-5 py-4 md:py-5 flex items-center gap-3"
                       >
                         <span className="w-7 h-7 rounded-full bg-amber-500/15 text-amber-300 border border-amber-400/25 flex items-center justify-center text-xs font-extrabold tabular-nums">
                           {slotNumber}
@@ -934,173 +1004,175 @@
                 </div>
               </section>
 
-              {/* Up Next Queue */}
-              <section aria-labelledby="up-next-heading">
-                <div className="flex items-center justify-between mb-3">
-                  <h2
-                    id="up-next-heading"
-                    className="text-[11px] font-extrabold uppercase tracking-[0.09em] text-zinc-400"
-                  >
-                    Up Next ({visibleQueue.length})
-                  </h2>
-                </div>
-
-                {visibleQueue.length === 0 ? (
-                  <div className="rounded-3xl bg-[#161922] border border-zinc-800/80 py-9 px-5 text-center">
-                    <Icon.Sparkles className="w-5 h-5 text-amber-400 mx-auto mb-2" />
-                    <p className="text-sm font-bold text-zinc-200">
-                      {filter === 'All'
-                        ? 'Nothing waiting in line'
-                        : `No ${filter} tasks queued`}
-                    </p>
-                    <p className="text-xs text-zinc-500 mt-0.5">
-                      Tap "+ Add Task" below whenever an idea pops up.
-                    </p>
+              {/* Right Column on Desktop: UP NEXT QUEUE + COMPLETED DRAWER */}
+              <div className="md:col-span-6 lg:col-span-6 space-y-6">
+                <section aria-labelledby="up-next-heading">
+                  <div className="flex items-center justify-between mb-3.5">
+                    <h2
+                      id="up-next-heading"
+                      className="text-[11px] font-extrabold uppercase tracking-[0.09em] text-zinc-400"
+                    >
+                      Up Next ({visibleQueue.length})
+                    </h2>
                   </div>
-                ) : (
-                  <ul className="space-y-2.5">
-                    {visibleQueue.map((task, idx) => {
-                      const isWork = task.category === 'Work';
-                      return (
-                        <li
-                          key={task.id}
-                          className="bg-[#161922] rounded-2xl border border-zinc-800/90 px-3.5 py-3 shadow-[0_2px_8px_rgba(0,0,0,0.25)] flex items-center gap-2.5 transition-all hover:border-zinc-700"
-                        >
-                          <button
-                            type="button"
-                            disabled={idx === 0}
-                            onClick={() => handleMoveUpInQueue(task.id)}
-                            aria-label={`Move "${task.title}" higher in queue`}
-                            className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 transition-colors ${
-                              idx === 0
-                                ? 'text-zinc-700 cursor-default'
-                                : 'text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 cursor-pointer'
-                            }`}
-                          >
-                            <Icon.ArrowUp className="w-3.5 h-3.5" />
-                          </button>
 
-                          <div className="flex-1 min-w-0">
-                            <p className="text-[14px] font-bold text-zinc-100 leading-snug tracking-[-0.01em] break-words">
-                              {task.title}
-                            </p>
-                            <div className="mt-1.5">
-                              <CategoryBadge category={task.category} />
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-1 shrink-0">
-                            {isLocked ? (
-                              <button
-                                type="button"
-                                onClick={triggerLockedFeedback}
-                                aria-disabled="true"
-                                className="min-h-[34px] px-2.5 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-500 text-xs font-bold inline-flex items-center gap-1 cursor-not-allowed hover:bg-amber-500/15 hover:text-amber-300 hover:border-amber-400/30 transition-colors"
-                              >
-                                <Icon.Lock className="w-3 h-3" />
-                                <span>Locked</span>
-                              </button>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => handlePromoteToFocus(task.id)}
-                                className={`min-h-[34px] px-3 rounded-full text-white text-xs font-bold inline-flex items-center gap-1 active:scale-95 transition-all cursor-pointer ${
-                                  isWork
-                                    ? 'bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-600 hover:to-orange-600 shadow-[0_4px_12px_rgba(244,63,94,0.3)]'
-                                    : 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 shadow-[0_4px_12px_rgba(16,185,129,0.3)]'
-                                }`}
-                              >
-                                <span>Focus</span>
-                                <Icon.ArrowRight className="w-3.5 h-3.5" />
-                              </button>
-                            )}
-
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteTask(task.id)}
-                              aria-label={`Delete "${task.title}"`}
-                              className="w-7 h-7 rounded-full text-zinc-600 hover:text-rose-400 hover:bg-rose-500/15 flex items-center justify-center transition-colors cursor-pointer"
-                            >
-                              <Icon.X className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </section>
-
-              {/* Completed Drawer */}
-              <section
-                aria-label="Completed tasks"
-                className="pt-1 flex flex-col items-center"
-              >
-                <button
-                  type="button"
-                  aria-expanded={isCompletedOpen}
-                  onClick={() => setIsCompletedOpen((prev) => !prev)}
-                  className="min-h-[38px] inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#161922] border border-zinc-800 hover:border-zinc-700 text-xs font-bold text-zinc-400 hover:text-zinc-200 transition-all cursor-pointer"
-                >
-                  <span>Completed ({visibleCompleted.length})</span>
-                  {isCompletedOpen ? (
-                    <Icon.ChevronUp className="w-3.5 h-3.5 text-zinc-500" />
-                  ) : (
-                    <Icon.ChevronDown className="w-3.5 h-3.5 text-zinc-500" />
-                  )}
-                </button>
-
-                {isCompletedOpen && (
-                  <div className="w-full mt-3 bg-[#161922] rounded-3xl border border-zinc-800/90 p-4 space-y-3">
-                    {visibleCompleted.length === 0 ? (
-                      <p className="text-xs text-zinc-500 text-center py-2">
-                        No completed tasks yet. Check off an active task above!
+                  {visibleQueue.length === 0 ? (
+                    <div className="rounded-3xl bg-[#161922] border border-zinc-800/80 py-10 px-5 text-center">
+                      <Icon.Sparkles className="w-5 h-5 text-amber-400 mx-auto mb-2" />
+                      <p className="text-sm font-bold text-zinc-200">
+                        {filter === 'All'
+                          ? 'Nothing waiting in line'
+                          : `No ${filter} tasks queued`}
                       </p>
-                    ) : (
-                      <ul className="divide-y divide-zinc-800/80">
-                        {visibleCompleted.map((task) => (
+                      <p className="text-xs text-zinc-500 mt-1">
+                        Click "+ Add Task" whenever an idea pops up.
+                      </p>
+                    </div>
+                  ) : (
+                    <ul className="space-y-2.5">
+                      {visibleQueue.map((task, idx) => {
+                        const isWork = task.category === 'Work';
+                        return (
                           <li
                             key={task.id}
-                            className="py-2.5 first:pt-0 last:pb-0 flex items-center justify-between gap-2.5"
+                            className="bg-[#161922] rounded-2xl border border-zinc-800/90 px-3.5 md:px-4 py-3 md:py-3.5 shadow-[0_2px_8px_rgba(0,0,0,0.25)] flex items-center gap-2.5 transition-all hover:border-zinc-700"
                           >
-                            <div className="min-w-0 flex-1">
-                              <p className="text-xs font-semibold text-zinc-500 line-through truncate">
+                            <button
+                              type="button"
+                              disabled={idx === 0}
+                              onClick={() => handleMoveUpInQueue(task.id)}
+                              aria-label={`Move "${task.title}" higher in queue`}
+                              className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 transition-colors ${
+                                idx === 0
+                                  ? 'text-zinc-700 cursor-default'
+                                  : 'text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 cursor-pointer'
+                              }`}
+                            >
+                              <Icon.ArrowUp className="w-3.5 h-3.5" />
+                            </button>
+
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[14px] font-bold text-zinc-100 leading-snug tracking-[-0.01em] break-words">
                                 {task.title}
                               </p>
-                              <div className="mt-1">
+                              <div className="mt-1.5">
                                 <CategoryBadge category={task.category} />
                               </div>
                             </div>
 
-                            <button
-                              type="button"
-                              onClick={() => handleRestoreTask(task.id)}
-                              className="min-h-[32px] px-2.5 rounded-full text-[11px] font-bold text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 inline-flex items-center gap-1 shrink-0 transition-colors cursor-pointer"
-                            >
-                              <Icon.RotateCcw className="w-3 h-3" />
-                              <span>Restore</span>
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
+                            <div className="flex items-center gap-1 shrink-0">
+                              {isLocked ? (
+                                <button
+                                  type="button"
+                                  onClick={triggerLockedFeedback}
+                                  aria-disabled="true"
+                                  className="min-h-[34px] px-2.5 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-500 text-xs font-bold inline-flex items-center gap-1 cursor-not-allowed hover:bg-amber-500/15 hover:text-amber-300 hover:border-amber-400/30 transition-colors"
+                                >
+                                  <Icon.Lock className="w-3 h-3" />
+                                  <span>Locked</span>
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => handlePromoteToFocus(task.id)}
+                                  className={`min-h-[34px] px-3 rounded-full text-white text-xs font-bold inline-flex items-center gap-1 active:scale-95 transition-all cursor-pointer ${
+                                    isWork
+                                      ? 'bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-600 hover:to-orange-600 shadow-[0_4px_12px_rgba(244,63,94,0.3)]'
+                                      : 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 shadow-[0_4px_12px_rgba(16,185,129,0.3)]'
+                                  }`}
+                                >
+                                  <span>Focus</span>
+                                  <Icon.ArrowRight className="w-3.5 h-3.5" />
+                                </button>
+                              )}
 
-                    <div className="pt-2 border-t border-zinc-800/80 flex justify-center">
-                      <button
-                        type="button"
-                        onClick={handleResetDemoData}
-                        className="text-[11px] font-bold text-zinc-500 hover:text-rose-400 underline underline-offset-2 py-1 px-2 cursor-pointer transition-colors"
-                      >
-                        Reset Demo Data
-                      </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteTask(task.id)}
+                                aria-label={`Delete "${task.title}"`}
+                                className="w-7 h-7 rounded-full text-zinc-600 hover:text-rose-400 hover:bg-rose-500/15 flex items-center justify-center transition-colors cursor-pointer"
+                              >
+                                <Icon.X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </section>
+
+                {/* Completed Drawer */}
+                <section
+                  aria-label="Completed tasks"
+                  className="pt-1 flex flex-col items-center md:items-stretch"
+                >
+                  <button
+                    type="button"
+                    aria-expanded={isCompletedOpen}
+                    onClick={() => setIsCompletedOpen((prev) => !prev)}
+                    className="min-h-[38px] inline-flex items-center justify-center gap-2 px-4 py-1.5 rounded-full bg-[#161922] border border-zinc-800 hover:border-zinc-700 text-xs font-bold text-zinc-400 hover:text-zinc-200 transition-all cursor-pointer"
+                  >
+                    <span>Completed ({visibleCompleted.length})</span>
+                    {isCompletedOpen ? (
+                      <Icon.ChevronUp className="w-3.5 h-3.5 text-zinc-500" />
+                    ) : (
+                      <Icon.ChevronDown className="w-3.5 h-3.5 text-zinc-500" />
+                    )}
+                  </button>
+
+                  {isCompletedOpen && (
+                    <div className="w-full mt-3 bg-[#161922] rounded-3xl border border-zinc-800/90 p-4 space-y-3">
+                      {visibleCompleted.length === 0 ? (
+                        <p className="text-xs text-zinc-500 text-center py-2">
+                          No completed tasks yet. Check off an active task above!
+                        </p>
+                      ) : (
+                        <ul className="divide-y divide-zinc-800/80">
+                          {visibleCompleted.map((task) => (
+                            <li
+                              key={task.id}
+                              className="py-2.5 first:pt-0 last:pb-0 flex items-center justify-between gap-2.5"
+                            >
+                              <div className="min-w-0 flex-1">
+                                <p className="text-xs font-semibold text-zinc-500 line-through truncate">
+                                  {task.title}
+                                </p>
+                                <div className="mt-1">
+                                  <CategoryBadge category={task.category} />
+                                </div>
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() => handleRestoreTask(task.id)}
+                                className="min-h-[32px] px-2.5 rounded-full text-[11px] font-bold text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 inline-flex items-center gap-1 shrink-0 transition-colors cursor-pointer"
+                              >
+                                <Icon.RotateCcw className="w-3 h-3" />
+                                <span>Restore</span>
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+
+                      <div className="pt-2 border-t border-zinc-800/80 flex justify-center">
+                        <button
+                          type="button"
+                          onClick={handleResetDemoData}
+                          className="text-[11px] font-bold text-zinc-500 hover:text-rose-400 underline underline-offset-2 py-1 px-2 cursor-pointer transition-colors"
+                        >
+                          Reset Demo Data
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                )}
-              </section>
+                  )}
+                </section>
+              </div>
             </main>
 
-            {/* Bottom Action Dock */}
-            <div className="sticky bottom-0 inset-x-0 z-20 px-5 py-4 bg-[#0F1117]/85 backdrop-blur-xl border-t border-zinc-800/80">
+            {/* Mobile-Only Bottom Action Dock */}
+            <div className="md:hidden fixed bottom-0 inset-x-0 z-20 max-w-[420px] mx-auto px-5 py-4 bg-[#0F1117]/85 backdrop-blur-xl border-t border-zinc-800/80">
               <button
                 type="button"
                 onClick={openAddSheet}
@@ -1111,10 +1183,10 @@
               </button>
             </div>
 
-            {/* New Task Slide-Up Bottom Sheet */}
+            {/* New Task Modal (Bottom Sheet on Phone, Centered Dialog on Desktop) */}
             {isSheetOpen && (
               <div
-                className="absolute inset-0 z-50 flex items-end justify-center bg-black/70 backdrop-blur-[3px] transition-opacity"
+                className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/70 backdrop-blur-[3px] md:p-4 transition-opacity"
                 onClick={() => setIsSheetOpen(false)}
               >
                 <div
@@ -1122,9 +1194,9 @@
                   aria-modal="true"
                   aria-labelledby="new-task-sheet-title"
                   onClick={(e) => e.stopPropagation()}
-                  className="w-full bg-[#161922] rounded-t-[32px] border-t border-zinc-800 px-6 pt-3 pb-7 shadow-2xl space-y-4"
+                  className="w-full max-w-[420px] md:max-w-md bg-[#161922] rounded-t-[32px] md:rounded-[28px] border-t md:border border-zinc-800 px-6 pt-3 md:pt-6 pb-7 shadow-2xl space-y-4"
                 >
-                  <div className="flex justify-center" aria-hidden="true">
+                  <div className="flex md:hidden justify-center" aria-hidden="true">
                     <div className="w-10 h-1.5 rounded-full bg-zinc-700" />
                   </div>
 
@@ -1231,10 +1303,10 @@
               </div>
             )}
 
-            {/* GitHub Cloud Sync Slide-Up Modal */}
+            {/* GitHub Cloud Sync Modal (Bottom Sheet on Phone, Centered Dialog on Desktop) */}
             {isSyncModalOpen && (
               <div
-                className="absolute inset-0 z-50 flex items-end justify-center bg-black/70 backdrop-blur-[3px] transition-opacity"
+                className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/70 backdrop-blur-[3px] md:p-4 transition-opacity"
                 onClick={() => setIsSyncModalOpen(false)}
               >
                 <div
@@ -1242,9 +1314,9 @@
                   aria-modal="true"
                   aria-labelledby="sync-sheet-title"
                   onClick={(e) => e.stopPropagation()}
-                  className="w-full bg-[#161922] rounded-t-[32px] border-t border-zinc-800 px-6 pt-3 pb-7 shadow-2xl space-y-4"
+                  className="w-full max-w-[420px] md:max-w-md bg-[#161922] rounded-t-[32px] md:rounded-[28px] border-t md:border border-zinc-800 px-6 pt-3 md:pt-6 pb-7 shadow-2xl space-y-4"
                 >
-                  <div className="flex justify-center" aria-hidden="true">
+                  <div className="flex md:hidden justify-center" aria-hidden="true">
                     <div className="w-10 h-1.5 rounded-full bg-zinc-700" />
                   </div>
 
