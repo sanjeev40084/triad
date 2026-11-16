@@ -80,7 +80,7 @@
 
   <!-- Triad Application Code -->
   <script type="text/babel">
-    const { useState, useEffect, useMemo, useRef, useCallback } = React;
+    const { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback } = React;
 
     const Icon = {
       Check: ({ className = 'w-4 h-4' }) => (
@@ -354,8 +354,27 @@
       const titleInputRef = useRef(null);
       const holdTimerRef = useRef(null);
       const dragMetaRef = useRef(null);
+      const pendingAnchorAdjustRef = useRef(null);
       const cardElsRef = useRef(new Map());
       const formattedDate = useMemo(() => formatHeaderDate(), []);
+
+      // Adjust anchorY synchronously right after React commits a reorder to the DOM
+      useLayoutEffect(() => {
+        const pending = pendingAnchorAdjustRef.current;
+        if (!pending) return;
+        pendingAnchorAdjustRef.current = null;
+
+        const meta = dragMetaRef.current;
+        const el = cardElsRef.current.get(pending.id);
+        if (meta && meta.isDragging && meta.id === pending.id && el) {
+          const prevTransform = el.style.transform;
+          el.style.transform = 'none';
+          const newNaturalTop = el.getBoundingClientRect().top;
+          meta.anchorY += newNaturalTop - pending.prevNaturalTop;
+          const dy = pending.clientY - meta.anchorY;
+          el.style.transform = `translate3d(0, ${dy}px, 0) scale(1.02)`;
+        }
+      }, [tasks]);
 
       const registerCardEl = useCallback((id, el) => {
         if (el) {
@@ -428,58 +447,56 @@
       useEffect(() => {
         const updateDragPosition = (clientY) => {
           const meta = dragMetaRef.current;
-          if (!meta || !meta.isDragging) return;
+          if (!meta || !meta.isDragging || pendingAnchorAdjustRef.current) return;
 
           const activeEl = cardElsRef.current.get(meta.id);
-          if (activeEl) {
-            const dy = clientY - meta.anchorY;
-            activeEl.style.transform = `translate3d(0, ${dy}px, 0) scale(1.025)`;
-          }
+          if (!activeEl) return;
 
-          // Gather all sibling cards in the same section sorted top-to-bottom
+          const dy = clientY - meta.anchorY;
+          activeEl.style.transform = `translate3d(0, ${dy}px, 0) scale(1.02)`;
+
+          // Measure natural resting vertical midpoints of all cards in this section
           const siblings = [];
           cardElsRef.current.forEach((el, id) => {
             if (el.dataset.dragSection === meta.section) {
               const rect = el.getBoundingClientRect();
-              siblings.push({ id, el, midY: rect.top + rect.height / 2 });
+              const naturalTop = id === meta.id ? rect.top - dy : rect.top;
+              siblings.push({
+                id,
+                el,
+                naturalTop,
+                midY: naturalTop + rect.height / 2,
+              });
             }
           });
-          siblings.sort((a, b) => a.midY - b.midY);
+          siblings.sort((a, b) => a.naturalTop - b.naturalTop);
 
           const currentIdx = siblings.findIndex((s) => s.id === meta.id);
           if (currentIdx === -1) return;
 
-          // Swap with item above when finger crosses above its midpoint
+          const currentNaturalTop = siblings[currentIdx].naturalTop;
+
+          // Swap with item above when pointer crosses above its resting midpoint
           if (currentIdx > 0 && clientY < siblings[currentIdx - 1].midY) {
             const target = siblings[currentIdx - 1];
-            const prevTop = activeEl ? activeEl.getBoundingClientRect().top : 0;
+            pendingAnchorAdjustRef.current = {
+              id: meta.id,
+              prevNaturalTop: currentNaturalTop,
+              clientY,
+            };
             reorderItems(meta.id, target.id);
-            requestAnimationFrame(() => {
-              const el = cardElsRef.current.get(meta.id);
-              if (el && dragMetaRef.current?.id === meta.id) {
-                const newTop = el.getBoundingClientRect().top;
-                dragMetaRef.current.anchorY += newTop - prevTop;
-                const dy = clientY - dragMetaRef.current.anchorY;
-                el.style.transform = `translate3d(0, ${dy}px, 0) scale(1.025)`;
-              }
-            });
           } else if (
-            // Swap with item below when finger crosses below its midpoint
+            // Swap with item below when pointer crosses below its resting midpoint
             currentIdx < siblings.length - 1 &&
             clientY > siblings[currentIdx + 1].midY
           ) {
             const target = siblings[currentIdx + 1];
-            const prevTop = activeEl ? activeEl.getBoundingClientRect().top : 0;
+            pendingAnchorAdjustRef.current = {
+              id: meta.id,
+              prevNaturalTop: currentNaturalTop,
+              clientY,
+            };
             reorderItems(meta.id, target.id);
-            requestAnimationFrame(() => {
-              const el = cardElsRef.current.get(meta.id);
-              if (el && dragMetaRef.current?.id === meta.id) {
-                const newTop = el.getBoundingClientRect().top;
-                dragMetaRef.current.anchorY += newTop - prevTop;
-                const dy = clientY - dragMetaRef.current.anchorY;
-                el.style.transform = `translate3d(0, ${dy}px, 0) scale(1.025)`;
-              }
-            });
           }
         };
 
