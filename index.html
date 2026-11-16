@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+
 <html lang="en" class="dark">
 <head>
   <meta charset="UTF-8" />
@@ -24,7 +24,7 @@
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
 
-  <!-- React & Babel Standalone (Zero build step needed on GitHub Pages) -->
+  <!-- React & Babel Standalone -->
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -75,9 +75,8 @@
 
   <!-- Triad Application Code -->
   <script type="text/babel">
-    const { useState, useEffect, useMemo, useRef } = React;
+    const { useState, useEffect, useMemo, useRef, useCallback } = React;
 
-    // Clean inline SVG icons (zero external icon bundle dependencies)
     const Icon = {
       Check: ({ className = 'w-4 h-4' }) => (
         <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
@@ -152,9 +151,24 @@
           <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
         </svg>
       ),
+      Cloud: ({ className = 'w-3.5 h-3.5' }) => (
+        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z" />
+        </svg>
+      ),
+      RefreshCw: ({ className = 'w-3.5 h-3.5' }) => (
+        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+          <path d="M21 3v5h-5" />
+          <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+          <path d="M8 16H3v5" />
+        </svg>
+      ),
     };
 
     const STORAGE_KEY = 'triad_sunlit_tasks_v3';
+    const SYNC_CONFIG_KEY = 'triad_gist_sync_v1';
+    const GIST_FILENAME = 'triad-tasks.json';
 
     const INITIAL_TASKS = [
       {
@@ -302,6 +316,22 @@
         return INITIAL_TASKS;
       });
 
+      // GitHub Gist Sync State
+      const [syncConfig, setSyncConfig] = useState(() => {
+        try {
+          const saved = window.localStorage.getItem(SYNC_CONFIG_KEY);
+          if (saved) return JSON.parse(saved);
+        } catch {}
+        return { token: '', gistId: '' };
+      });
+      const [syncStatus, setSyncStatus] = useState('idle'); // 'idle' | 'syncing' | 'synced' | 'error'
+      const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
+      const [tokenInput, setTokenInput] = useState(syncConfig.token || '');
+      const [gistIdInput, setGistIdInput] = useState(syncConfig.gistId || '');
+
+      const isConfigured = Boolean(syncConfig.token && syncConfig.gistId);
+      const skipNextPushRef = useRef(false);
+
       const [filter, setFilter] = useState('All');
       const [isSheetOpen, setIsSheetOpen] = useState(false);
       const [newTitle, setNewTitle] = useState('');
@@ -314,13 +344,114 @@
       const titleInputRef = useRef(null);
       const formattedDate = useMemo(() => formatHeaderDate(), []);
 
+      const triggerToast = useCallback((message) => setToast(message), []);
+
+      // Pull latest tasks from GitHub Gist
+      const pullFromGist = useCallback(
+        async (cfg = syncConfig, silent = false) => {
+          if (!cfg.token || !cfg.gistId) return;
+          setSyncStatus('syncing');
+          try {
+            const res = await fetch(
+              `https://api.github.com/gists/${cfg.gistId.trim()}`,
+              {
+                headers: {
+                  Authorization: `Bearer ${cfg.token.trim()}`,
+                  Accept: 'application/vnd.github+json',
+                },
+                cache: 'no-store',
+              }
+            );
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+            const file = data.files && data.files[GIST_FILENAME];
+            if (file && file.content) {
+              const parsed = JSON.parse(file.content);
+              if (Array.isArray(parsed)) {
+                skipNextPushRef.current = true;
+                setTasks(parsed);
+                window.localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+              }
+            }
+            setSyncStatus('synced');
+            if (!silent) triggerToast('Synced from GitHub Cloud');
+          } catch (err) {
+            console.error('Gist pull error:', err);
+            setSyncStatus('error');
+            if (!silent) triggerToast('Sync failed — check Token & Gist ID');
+          }
+        },
+        [syncConfig, triggerToast]
+      );
+
+      // Push local tasks to GitHub Gist
+      const pushToGist = useCallback(
+        async (nextTasks, cfg = syncConfig) => {
+          if (!cfg.token || !cfg.gistId) return;
+          setSyncStatus('syncing');
+          try {
+            const res = await fetch(
+              `https://api.github.com/gists/${cfg.gistId.trim()}`,
+              {
+                method: 'PATCH',
+                headers: {
+                  Authorization: `Bearer ${cfg.token.trim()}`,
+                  Accept: 'application/vnd.github+json',
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  files: {
+                    [GIST_FILENAME]: {
+                      content: JSON.stringify(nextTasks, null, 2),
+                    },
+                  },
+                }),
+              }
+            );
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            setSyncStatus('synced');
+          } catch (err) {
+            console.error('Gist push error:', err);
+            setSyncStatus('error');
+          }
+        },
+        [syncConfig]
+      );
+
+      // Pull on initial load & whenever app returns to foreground
+      useEffect(() => {
+        if (!isConfigured) return;
+        pullFromGist(syncConfig, true);
+
+        const handleVisibility = () => {
+          if (document.visibilityState === 'visible') {
+            pullFromGist(syncConfig, true);
+          }
+        };
+        document.addEventListener('visibilitychange', handleVisibility);
+        return () =>
+          document.removeEventListener('visibilitychange', handleVisibility);
+      }, [isConfigured, syncConfig, pullFromGist]);
+
+      // Save locally & push debounced changes to GitHub Gist
       useEffect(() => {
         try {
           window.localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
         } catch (err) {
           console.error('Failed to save tasks:', err);
         }
-      }, [tasks]);
+
+        if (!isConfigured) return;
+        if (skipNextPushRef.current) {
+          skipNextPushRef.current = false;
+          return;
+        }
+
+        const timer = setTimeout(() => {
+          pushToGist(tasks, syncConfig);
+        }, 650);
+        return () => clearTimeout(timer);
+      }, [tasks, isConfigured, syncConfig, pushToGist]);
 
       useEffect(() => {
         if (isSheetOpen) {
@@ -331,17 +462,37 @@
 
       useEffect(() => {
         const onKeyDown = (e) => {
-          if (e.key === 'Escape' && isSheetOpen) setIsSheetOpen(false);
+          if (e.key === 'Escape') {
+            setIsSheetOpen(false);
+            setIsSyncModalOpen(false);
+          }
         };
         window.addEventListener('keydown', onKeyDown);
         return () => window.removeEventListener('keydown', onKeyDown);
-      }, [isSheetOpen]);
+      }, []);
 
       useEffect(() => {
         if (!toast) return;
         const timer = setTimeout(() => setToast(''), 2600);
         return () => clearTimeout(timer);
       }, [toast]);
+
+      const handleSaveSyncSettings = async (e) => {
+        e.preventDefault();
+        const cleanCfg = {
+          token: tokenInput.trim(),
+          gistId: gistIdInput.trim(),
+        };
+        setSyncConfig(cleanCfg);
+        window.localStorage.setItem(SYNC_CONFIG_KEY, JSON.stringify(cleanCfg));
+        setIsSyncModalOpen(false);
+        if (cleanCfg.token && cleanCfg.gistId) {
+          await pullFromGist(cleanCfg, false);
+        } else {
+          setSyncStatus('idle');
+          triggerToast('Cloud sync disconnected');
+        }
+      };
 
       const allActive = useMemo(
         () => tasks.filter((t) => t.status === 'active'),
@@ -403,8 +554,6 @@
             : allCompleted.filter((t) => t.category === filter),
         [allCompleted, filter]
       );
-
-      const triggerToast = (message) => setToast(message);
 
       const triggerLockedFeedback = () => {
         setShakeMeter(true);
@@ -549,15 +698,64 @@
 
             {/* Sticky Header */}
             <header className="sticky top-0 z-20 bg-[#0F1117]/85 backdrop-blur-xl px-5 pt-5 pb-4 border-b border-zinc-800/80">
-              <div className="flex items-center justify-between gap-3 mb-4">
+              <div className="flex items-center justify-between gap-2 mb-4">
                 <div>
                   <div className="inline-flex items-center gap-1.5 text-[11px] font-bold tracking-[0.09em] text-amber-300/85 uppercase">
                     <Icon.Moon className="w-3.5 h-3.5 text-amber-400" />
                     <span>{formattedDate}</span>
                   </div>
-                  <h1 className="text-[28px] font-extrabold tracking-[-0.03em] text-white leading-tight">
-                    Triad
-                  </h1>
+                  <div className="flex items-center gap-2">
+                    <h1 className="text-[28px] font-extrabold tracking-[-0.03em] text-white leading-tight">
+                      Triad
+                    </h1>
+
+                    {/* Cloud Sync Pill Button */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTokenInput(syncConfig.token || '');
+                        setGistIdInput(syncConfig.gistId || '');
+                        setIsSyncModalOpen(true);
+                      }}
+                      title="Configure GitHub Cloud Sync"
+                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold border transition-all cursor-pointer ${
+                        !isConfigured
+                          ? 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:border-zinc-700'
+                          : syncStatus === 'error'
+                          ? 'bg-rose-500/15 border-rose-500/30 text-rose-300'
+                          : syncStatus === 'syncing'
+                          ? 'bg-amber-500/15 border-amber-400/30 text-amber-300'
+                          : 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300'
+                      }`}
+                    >
+                      <Icon.Cloud className="w-3 h-3" />
+                      <span>
+                        {!isConfigured
+                          ? 'Sync'
+                          : syncStatus === 'syncing'
+                          ? 'Syncing...'
+                          : syncStatus === 'error'
+                          ? 'Sync Err'
+                          : 'Synced'}
+                      </span>
+                    </button>
+
+                    {isConfigured && (
+                      <button
+                        type="button"
+                        onClick={() => pullFromGist(syncConfig, false)}
+                        aria-label="Refresh from cloud"
+                        title="Sync now"
+                        className="w-6 h-6 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                      >
+                        <Icon.RefreshCw
+                          className={`w-3 h-3 ${
+                            syncStatus === 'syncing' ? 'animate-spin' : ''
+                          }`}
+                        />
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <PlayfulSlotMeter
@@ -913,7 +1111,7 @@
               </button>
             </div>
 
-            {/* Slide-Up Bottom Sheet */}
+            {/* New Task Slide-Up Bottom Sheet */}
             {isSheetOpen && (
               <div
                 className="absolute inset-0 z-50 flex items-end justify-center bg-black/70 backdrop-blur-[3px] transition-opacity"
@@ -1027,6 +1225,93 @@
                           <span>Focus Now</span>
                         )}
                       </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+
+            {/* GitHub Cloud Sync Slide-Up Modal */}
+            {isSyncModalOpen && (
+              <div
+                className="absolute inset-0 z-50 flex items-end justify-center bg-black/70 backdrop-blur-[3px] transition-opacity"
+                onClick={() => setIsSyncModalOpen(false)}
+              >
+                <div
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="sync-sheet-title"
+                  onClick={(e) => e.stopPropagation()}
+                  className="w-full bg-[#161922] rounded-t-[32px] border-t border-zinc-800 px-6 pt-3 pb-7 shadow-2xl space-y-4"
+                >
+                  <div className="flex justify-center" aria-hidden="true">
+                    <div className="w-10 h-1.5 rounded-full bg-zinc-700" />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <h2
+                      id="sync-sheet-title"
+                      className="text-lg font-extrabold tracking-tight text-white"
+                    >
+                      GitHub Cloud Sync
+                    </h2>
+                    <button
+                      type="button"
+                      onClick={() => setIsSyncModalOpen(false)}
+                      aria-label="Close modal"
+                      className="w-8 h-8 rounded-full bg-zinc-800 text-zinc-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                    >
+                      <Icon.X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <p className="text-xs text-zinc-400 leading-relaxed">
+                    Sync tasks across your computer and phone using a private GitHub Gist.
+                  </p>
+
+                  <form onSubmit={handleSaveSyncSettings} className="space-y-3">
+                    <div>
+                      <label className="block text-[11px] font-bold text-zinc-400 mb-1">
+                        GitHub Personal Access Token (gist scope)
+                      </label>
+                      <input
+                        type="password"
+                        value={tokenInput}
+                        onChange={(e) => setTokenInput(e.target.value)}
+                        placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                        className="w-full min-h-[44px] px-3.5 rounded-2xl bg-[#0F1117] border border-zinc-800 text-xs font-semibold text-white placeholder:text-zinc-600 focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-zinc-400 mb-1">
+                        Private Gist ID
+                      </label>
+                      <input
+                        type="text"
+                        value={gistIdInput}
+                        onChange={(e) => setGistIdInput(e.target.value)}
+                        placeholder="e.g. a1b2c3d4e5f6g7h8i9j0"
+                        className="w-full min-h-[44px] px-3.5 rounded-2xl bg-[#0F1117] border border-zinc-800 text-xs font-semibold text-white placeholder:text-zinc-600 focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+
+                    <div className="pt-1 flex gap-2">
+                      <button
+                        type="submit"
+                        className="flex-1 min-h-[46px] rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-xs font-extrabold cursor-pointer"
+                      >
+                        Save & Sync Now
+                      </button>
+                      {isConfigured && (
+                        <button
+                          type="button"
+                          onClick={() => pushToGist(tasks, syncConfig)}
+                          className="px-4 min-h-[46px] rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-bold cursor-pointer"
+                        >
+                          Push Local
+                        </button>
+                      )}
                     </div>
                   </form>
                 </div>
