@@ -36,8 +36,6 @@
     <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
 
     <style>
         body {
@@ -73,7 +71,7 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useRef, useLayoutEffect } = React;
+        const { useState, useEffect, useRef } = React;
 
         const STORAGE_KEY = 'triad_tasks_v2';
         const GIST_TOKEN_KEY = 'triad_gist_token_v2';
@@ -113,7 +111,7 @@
             const [gistToken, setGistToken] = useState(() => localStorage.getItem(GIST_TOKEN_KEY) || '');
             const [gistId, setGistId] = useState(() => localStorage.getItem(GIST_ID_KEY) || '');
             const [isSyncing, setIsSyncing] = useState(false);
-            const [syncStatus, setSyncStatus] = useState('idle'); // 'idle', 'success', 'error'
+            const [syncStatus, setSyncStatus] = useState('idle');
 
             // Completed Drawer
             const [isCompletedOpen, setIsCompletedOpen] = useState(false);
@@ -160,7 +158,6 @@
                         const remoteTasks = remoteContent.tasks || [];
                         const remoteDeleted = remoteContent.deletedIds || [];
 
-                        // Merge logic based on updatedAt timestamp
                         const mergedMap = new Map();
                         const allTasksMap = [...tasks, ...updatedTasks, ...remoteTasks];
 
@@ -178,7 +175,6 @@
                         setTasks(finalTasks);
                         setDeletedIds(finalDeleted);
 
-                        // Push merged back
                         await fetch(`https://api.github.com/gists/${gistId}`, {
                             method: 'PATCH',
                             headers: {
@@ -234,7 +230,6 @@
                         }
                     }
 
-                    // Push local state
                     const pushRes = await fetch(`https://api.github.com/gists/${gistId}`, {
                         method: 'PATCH',
                         headers: {
@@ -370,8 +365,9 @@
                 triggerToast('Task updated');
             };
 
-            // Drag and Drop reordering logic
-            const handleDragStart = (e, item, statusList) => {
+            // Global Pointer Events for Robust Drag and Drop
+            const handlePointerDown = (e, item, statusList) => {
+                if (e.button !== undefined && e.button !== 0) return; // Only left click / touch
                 const clientY = e.touches ? e.touches[0].clientY : e.clientY;
                 const cardEl = e.currentTarget.closest('[data-id]');
                 const rect = cardEl ? cardEl.getBoundingClientRect() : { top: 0, height: 60 };
@@ -385,43 +381,57 @@
                     height: rect.height,
                     list: statusList
                 };
+
+                window.addEventListener('pointermove', handlePointerMove);
+                window.addEventListener('pointerup', handlePointerUp);
+                window.addEventListener('touchmove', handleTouchMove, { passive: false });
+                window.addEventListener('touchend', handlePointerUp);
+
                 setForceRender(n => n + 1);
             };
 
-            const handlePointerMove = (e) => {
-                if (!dragMetaRef.current) return;
-                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-                const deltaY = clientY - dragMetaRef.current.startY;
-                dragMetaRef.current.offsetY = deltaY;
+            const handleTouchMove = (e) => {
+                if (dragMetaRef.current) {
+                    e.preventDefault(); // Stop mobile browser scrolling while dragging
+                }
+            };
 
-                // Check for item swap based on midpoint
+            const handlePointerMove = (e) => {
                 const meta = dragMetaRef.current;
-                const currentCenter = meta.initialTop + meta.offsetY + (meta.height / 2);
-                
+                if (!meta) return;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                const deltaY = clientY - meta.startY;
+                meta.offsetY = deltaY;
+
+                // Check for item swap based on midpoint threshold
                 const siblings = tasks.filter(t => t.status === meta.status).sort((a,b) => a.order - b.order);
                 const currentIndex = siblings.findIndex(t => t.id === meta.id);
 
-                if (currentIndex > 0 && deltaY < -meta.height * 0.5) {
-                    // Swap with previous
+                if (currentIndex > 0 && deltaY < -meta.height * 0.45) {
                     const prev = siblings[currentIndex - 1];
                     reorderItems(meta.id, prev.id, meta.status);
-                    dragMetaRef.current.startY = clientY;
-                    dragMetaRef.current.initialTop -= meta.height;
-                    dragMetaRef.current.offsetY = 0;
-                } else if (currentIndex < siblings.length - 1 && deltaY > meta.height * 0.5) {
-                    // Swap with next
+                    meta.startY = clientY;
+                    meta.initialTop -= meta.height;
+                    meta.offsetY = 0;
+                } else if (currentIndex < siblings.length - 1 && deltaY > meta.height * 0.45) {
                     const next = siblings[currentIndex + 1];
                     reorderItems(meta.id, next.id, meta.status);
-                    dragMetaRef.current.startY = clientY;
-                    dragMetaRef.current.initialTop += meta.height;
-                    dragMetaRef.current.offsetY = 0;
+                    meta.startY = clientY;
+                    meta.initialTop += meta.height;
+                    meta.offsetY = 0;
                 }
                 setForceRender(n => n + 1);
             };
 
-            const handlePointerEnd = () => {
+            const handlePointerUp = () => {
                 if (!dragMetaRef.current) return;
                 dragMetaRef.current = null;
+
+                window.removeEventListener('pointermove', handlePointerMove);
+                window.removeEventListener('pointerup', handlePointerUp);
+                window.removeEventListener('touchmove', handleTouchMove);
+                window.removeEventListener('touchend', handlePointerUp);
+
                 setForceRender(n => n + 1);
             };
 
@@ -445,7 +455,6 @@
                 autoSyncWithGist(updated, deletedIds);
             };
 
-            // Filter helper
             const matchesFilter = (t) => {
                 if (filter === 'all') return true;
                 return t.category === filter;
@@ -467,7 +476,6 @@
                         </div>
                     )}
 
-                    {/* Main Container: Mobile phone frame on desktop, full width on mobile */}
                     <div className="w-full max-w-5xl mx-auto flex flex-col min-h-screen md:py-8 md:px-4">
                         
                         {/* Header */}
@@ -482,7 +490,6 @@
                             </div>
 
                             <div className="flex items-center space-x-3">
-                                {/* Sync Settings Button */}
                                 <button 
                                     onClick={() => setIsSyncModalOpen(true)}
                                     className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center space-x-1.5 transition border ${
@@ -495,7 +502,6 @@
                                     <span>{gistToken && gistId ? 'Synced' : 'Cloud Sync'}</span>
                                 </button>
 
-                                {/* Capacity Indicator Ring */}
                                 <div className="flex items-center space-x-2 bg-slate-900/90 border border-slate-800 px-3 py-1.5 rounded-full shadow-inner">
                                     <svg className="w-5 h-5 -rotate-90" viewBox="0 0 36 36">
                                         <path className="text-slate-800" strokeWidth="3.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
@@ -505,7 +511,6 @@
                                     <span className="text-xs font-bold tracking-tight text-slate-200">{focusCount}/3</span>
                                 </div>
 
-                                {/* Desktop Add Task Button */}
                                 <button
                                     onClick={() => { setIsQuickFocus(false); setIsAddOpen(true); }}
                                     className="hidden md:flex items-center space-x-1.5 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-lg shadow-indigo-600/20 transition active:scale-95"
@@ -546,7 +551,7 @@
                             </div>
                         </div>
 
-                        {/* Main App Content Grid (Responsive: 1 col on mobile, 2 cols on desktop) */}
+                        {/* Main App Content Grid */}
                         <main className="flex-1 px-5 py-4 pb-28 md:pb-8 grid grid-cols-1 md:grid-cols-2 gap-6">
                             
                             {/* Left Column: Focus Now */}
@@ -579,34 +584,31 @@
                                                 style={{
                                                     transform: `translate3d(0, ${dragOffsetY}px, 0)`,
                                                     zIndex: isDraggingThis ? 30 : 10,
-                                                    transition: isDraggingThis ? 'none' : 'transform 0.2s ease'
+                                                    transition: isDraggingThis ? 'none' : 'transform 0.15s ease'
                                                 }}
                                                 className={`relative bg-[#161922] border rounded-2xl p-3.5 flex items-center justify-between shadow-lg transition-colors group ${
                                                     task.category === 'work' ? 'border-indigo-500/30 hover:border-indigo-500/50' : 'border-teal-500/30 hover:border-teal-500/50'
-                                                } ${isDraggingThis ? 'shadow-2xl ring-2 ring-indigo-500/50 opacity-95' : ''}`}
+                                                } ${isDraggingThis ? 'shadow-2xl ring-2 ring-indigo-500/60 opacity-95 bg-[#1b1f2e]' : ''}`}
                                             >
-                                                {/* Left Accent Bar */}
                                                 <div className={`absolute left-0 top-3 bottom-3 w-1 rounded-r-full ${task.category === 'work' ? 'bg-indigo-500' : 'bg-teal-400'}`}></div>
 
                                                 <div className="flex items-center space-x-3 pl-2.5 flex-1 min-w-0">
                                                     {/* Drag Handle */}
                                                     <div 
-                                                        onPointerDown={(e) => handleDragStart(e, task, 'focus')}
-                                                        className="cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-200 p-1 touch-dragging select-none"
-                                                        title="Hold to drag"
+                                                        onPointerDown={(e) => handlePointerDown(e, task, 'focus')}
+                                                        className="cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-200 p-2 touch-dragging select-none"
+                                                        title="Drag to reorder"
                                                     >
-                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 8h16M4 16h16"/></svg>
+                                                        <svg className="w-5 h-5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 8h16M4 16h16"/></svg>
                                                     </div>
 
-                                                    {/* Checkbox */}
                                                     <button
                                                         onClick={() => toggleComplete(task.id)}
-                                                        className="w-6 h-6 rounded-lg border-2 border-slate-600 hover:border-indigo-400 flex items-center justify-center transition group-hover:border-slate-500 shrink-0"
+                                                        className="w-6 h-6 rounded-lg border-2 border-slate-600 hover:border-indigo-400 flex items-center justify-center transition shrink-0"
                                                     >
                                                         <svg className="w-3.5 h-3.5 text-indigo-400 opacity-0 hover:opacity-100 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"/></svg>
                                                     </button>
 
-                                                    {/* Title / Inline Editor */}
                                                     <div className="flex-1 min-w-0">
                                                         {editingId === task.id ? (
                                                             <input
@@ -635,7 +637,6 @@
                                                     </div>
                                                 </div>
 
-                                                {/* Card Actions */}
                                                 <div className="flex items-center space-x-1 shrink-0 ml-2">
                                                     <button
                                                         onClick={() => moveToWaiting(task.id)}
@@ -668,7 +669,6 @@
                             {/* Right Column: Up Next Queue & Waiting Shelf */}
                             <div className="space-y-6">
                                 
-                                {/* Up Next Queue */}
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between">
                                         <h2 className="text-xs font-extrabold uppercase tracking-widest text-slate-400">Up Next Queue</h2>
@@ -692,17 +692,17 @@
                                                         style={{
                                                             transform: `translate3d(0, ${dragOffsetY}px, 0)`,
                                                             zIndex: isDraggingThis ? 30 : 10,
-                                                            transition: isDraggingThis ? 'none' : 'transform 0.2s ease'
+                                                            transition: isDraggingThis ? 'none' : 'transform 0.15s ease'
                                                         }}
-                                                        className="bg-[#161922] border border-slate-800/80 rounded-2xl p-3 flex items-center justify-between shadow hover:border-slate-700 transition"
+                                                        className={`bg-[#161922] border border-slate-800/80 rounded-2xl p-3 flex items-center justify-between shadow transition ${isDraggingThis ? 'shadow-2xl ring-2 ring-indigo-500/60 opacity-95 bg-[#1b1f2e]' : ''}`}
                                                     >
                                                         <div className="flex items-center space-x-3 flex-1 min-w-0 pl-1">
                                                             <div 
-                                                                onPointerDown={(e) => handleDragStart(e, task, 'queue')}
-                                                                className="cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-200 p-1 touch-dragging select-none"
-                                                                title="Hold to drag"
+                                                                onPointerDown={(e) => handlePointerDown(e, task, 'queue')}
+                                                                className="cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-200 p-2 touch-dragging select-none"
+                                                                title="Drag to reorder"
                                                             >
-                                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 8h16M4 16h16"/></svg>
+                                                                <svg className="w-5 h-5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 8h16M4 16h16"/></svg>
                                                             </div>
 
                                                             <div className="flex-1 min-w-0">
@@ -756,7 +756,6 @@
                                     </div>
                                 </div>
 
-                                {/* Waiting / Parked Shelf */}
                                 {waitingTasks.length > 0 && (
                                     <div className="space-y-3">
                                         <div className="flex items-center justify-between">
@@ -794,7 +793,6 @@
                                     </div>
                                 )}
 
-                                {/* Completed Drawer Toggle */}
                                 <div>
                                     <button
                                         onClick={() => setIsCompletedOpen(!isCompletedOpen)}
@@ -842,7 +840,7 @@
                             </button>
                         </div>
 
-                        {/* Add Task Modal / Slide-up Sheet */}
+                        {/* Add Task Modal */}
                         {isAddOpen && (
                             <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/70 backdrop-blur-sm p-0 md:p-4">
                                 <div className="w-full md:max-w-md bg-[#161922] border border-slate-800 rounded-t-3xl md:rounded-3xl p-6 shadow-2xl animate-in fade-in slide-in-from-bottom duration-200">
@@ -930,7 +928,7 @@
                                         </div>
 
                                         <div>
-                                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Secret Gist ID</label>
+                                            <label className="log block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Secret Gist ID</label>
                                             <input
                                                 type="text"
                                                 value={gistId}
