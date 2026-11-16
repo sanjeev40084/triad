@@ -349,34 +349,32 @@
       const [completingId, setCompletingId] = useState(null);
       const [toast, setToast] = useState('');
       const [shakeMeter, setShakeMeter] = useState(false);
-
-      // Press-and-Hold Drag Reorder State
-      const [dragState, setDragState] = useState(null); // { id, section, offsetY }
-      const holdTimerRef = useRef(null);
-      const dragMetaRef = useRef(null);
+      const [dragState, setDragState] = useState(null);
 
       const titleInputRef = useRef(null);
+      const holdTimerRef = useRef(null);
+      const dragMetaRef = useRef(null);
       const formattedDate = useMemo(() => formatHeaderDate(), []);
 
-      const triggerToast = useCallback((message) => setToast(message), []);
+      const triggerToast = useCallback((message) => {
+        setToast(message);
+      }, []);
 
-      // Reorder two items in the same section ('active' or 'backlog')
-      const reorderItems = useCallback((draggedId, targetId) => {
-        if (!draggedId || !targetId || draggedId === targetId) return;
+      // Swap two tasks in the master list while preserving their status
+      const reorderItems = useCallback((sourceId, targetId) => {
+        if (!sourceId || !targetId || sourceId === targetId) return;
         setTasks((prev) => {
-          const fromIdx = prev.findIndex((t) => t.id === draggedId);
+          const fromIdx = prev.findIndex((t) => t.id === sourceId);
           const toIdx = prev.findIndex((t) => t.id === targetId);
           if (fromIdx === -1 || toIdx === -1) return prev;
-          if (prev[fromIdx].status !== prev[toIdx].status) return prev;
-
-          const updated = [...prev];
-          const [moved] = updated.splice(fromIdx, 1);
-          updated.splice(toIdx, 0, moved);
-          return updated;
+          const next = [...prev];
+          const [moved] = next.splice(fromIdx, 1);
+          next.splice(toIdx, 0, moved);
+          return next;
         });
       }, []);
 
-      // Press-and-hold pointer start (220ms hold threshold so normal scrolling still works smoothly)
+      // Press-and-hold pointer start (180ms hold threshold so normal scrolling still works smoothly)
       const handleCardPointerDown = (e, task, section) => {
         if (e.button !== undefined && e.button !== 0) return;
         if (e.target.closest('button')) return;
@@ -398,39 +396,28 @@
         holdTimerRef.current = setTimeout(() => {
           if (!dragMetaRef.current || dragMetaRef.current.id !== task.id) return;
           dragMetaRef.current.isDragging = true;
+          document.body.style.overflow = 'hidden';
+          document.body.style.touchAction = 'none';
           if (typeof navigator !== 'undefined' && navigator.vibrate) {
             navigator.vibrate(25);
           }
           setDragState({ id: task.id, section, offsetY: 0 });
-        }, 220);
+        }, 180);
       };
 
-      // Global pointer move & release listeners while holding/dragging
+      // Global pointer & touch move/release listeners while holding/dragging
       useEffect(() => {
-        const handleWindowPointerMove = (e) => {
+        const updateDragPosition = (clientX, clientY) => {
           const meta = dragMetaRef.current;
-          if (!meta) return;
+          if (!meta || !meta.isDragging) return;
 
-          if (!meta.isDragging) {
-            // Cancel hold if user starts scrolling before 220ms
-            if (
-              Math.abs(e.clientY - meta.startY) > 10 ||
-              Math.abs(e.clientX - meta.startX) > 10
-            ) {
-              clearTimeout(holdTimerRef.current);
-              dragMetaRef.current = null;
-            }
-            return;
-          }
-
-          e.preventDefault();
-          const deltaY = e.clientY - meta.lastY;
+          const deltaY = clientY - meta.lastY;
           setDragState((prev) =>
             prev ? { ...prev, offsetY: deltaY } : null
           );
 
           // Find which card in the same section is under the finger/cursor
-          const elements = document.elementsFromPoint(e.clientX, e.clientY);
+          const elements = document.elementsFromPoint(clientX, clientY);
           const targetCard = elements.find(
             (el) =>
               el.dataset &&
@@ -442,14 +429,46 @@
           if (targetCard) {
             const targetId = targetCard.dataset.dragId;
             reorderItems(meta.id, targetId);
-            meta.lastY = e.clientY;
+            meta.lastY = clientY;
             setDragState({ id: meta.id, section: meta.section, offsetY: 0 });
+          }
+        };
+
+        const handleWindowPointerMove = (e) => {
+          const meta = dragMetaRef.current;
+          if (!meta) return;
+
+          if (!meta.isDragging) {
+            // Cancel hold if user starts scrolling before 180ms
+            if (
+              Math.abs(e.clientY - meta.startY) > 10 ||
+              Math.abs(e.clientX - meta.startX) > 10
+            ) {
+              clearTimeout(holdTimerRef.current);
+              dragMetaRef.current = null;
+            }
+            return;
+          }
+
+          if (e.cancelable) e.preventDefault();
+          updateDragPosition(e.clientX, e.clientY);
+        };
+
+        // Explicit non-passive touchmove prevents mobile browser page scroll once grabbed
+        const handleWindowTouchMove = (e) => {
+          const meta = dragMetaRef.current;
+          if (!meta || !meta.isDragging) return;
+          if (e.cancelable) e.preventDefault();
+          if (e.touches && e.touches[0]) {
+            updateDragPosition(e.touches[0].clientX, e.touches[0].clientY);
           }
         };
 
         const handleWindowPointerEnd = () => {
           if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
           if (dragMetaRef.current?.isDragging) {
+            document.body.style.overflow = '';
+            document.body.style.touchAction = '';
             setDragState(null);
           }
           dragMetaRef.current = null;
@@ -458,13 +477,21 @@
         window.addEventListener('pointermove', handleWindowPointerMove, {
           passive: false,
         });
+        window.addEventListener('touchmove', handleWindowTouchMove, {
+          passive: false,
+        });
         window.addEventListener('pointerup', handleWindowPointerEnd);
-        window.addEventListener('pointercancel', handleWindowPointerEnd);
+        window.addEventListener('touchend', handleWindowPointerEnd);
+        window.addEventListener('touchcancel', handleWindowPointerEnd);
 
         return () => {
+          document.body.style.overflow = '';
+          document.body.style.touchAction = '';
           window.removeEventListener('pointermove', handleWindowPointerMove);
+          window.removeEventListener('touchmove', handleWindowTouchMove);
           window.removeEventListener('pointerup', handleWindowPointerEnd);
-          window.removeEventListener('pointercancel', handleWindowPointerEnd);
+          window.removeEventListener('touchend', handleWindowPointerEnd);
+          window.removeEventListener('touchcancel', handleWindowPointerEnd);
         };
       }, [reorderItems]);
 
@@ -1041,8 +1068,9 @@
                                   Math.min(24, dragState.offsetY)
                                 )}px) scale(1.025)`,
                                 zIndex: 30,
+                                touchAction: 'none',
                               }
-                            : undefined
+                            : { touchAction: 'pan-y' }
                         }
                         className={`no-callout group relative overflow-hidden rounded-3xl border cursor-grab active:cursor-grabbing ${
                           isDragging
@@ -1187,8 +1215,9 @@
                                       Math.min(24, dragState.offsetY)
                                     )}px) scale(1.025)`,
                                     zIndex: 30,
+                                    touchAction: 'none',
                                   }
-                                : undefined
+                                : { touchAction: 'pan-y' }
                             }
                             className={`no-callout group relative bg-[#161922] rounded-2xl border px-3 md:px-3.5 py-3 md:py-3.5 flex items-center gap-2.5 cursor-grab active:cursor-grabbing ${
                               isDragging
