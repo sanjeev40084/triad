@@ -1,0 +1,1044 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Triad — Focus on 3</title>
+
+  <!-- Android & iOS PWA Meta Tags -->
+  <meta name="theme-color" content="#0F1117" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Triad" />
+
+  <!-- Inline App Icon & Manifest for GitHub Pages PWA Install -->
+  <link rel="apple-touch-icon" href="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='112' fill='%230F1117'/%3E%3Crect x='128' y='156' width='56' height='200' rx='28' fill='%23F43F5E'/%3E%3Crect x='228' y='156' width='56' height='200' rx='28' fill='%2310B981'/%3E%3Crect x='328' y='156' width='56' height='200' rx='28' fill='%23F59E0B'/%3E%3C/svg%3E" />
+  <link rel="manifest" id="pwa-manifest" />
+
+  <!-- Modern Geometric Font: Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- React & Babel Standalone (Zero build step needed on GitHub Pages) -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: #07080B;
+      color: #F4F4F5;
+      margin: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+  </style>
+</head>
+<body class="antialiased selection:bg-rose-500/30 selection:text-rose-200">
+  <div id="root"></div>
+
+  <!-- Dynamic Manifest Registration -->
+  <script>
+    (function () {
+      const iconUrl =
+        "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='112' fill='%230F1117'/%3E%3Crect x='128' y='156' width='56' height='200' rx='28' fill='%23F43F5E'/%3E%3Crect x='228' y='156' width='56' height='200' rx='28' fill='%2310B981'/%3E%3Crect x='328' y='156' width='56' height='200' rx='28' fill='%23F59E0B'/%3E%3C/svg%3E";
+      const manifest = {
+        name: 'Triad Focus',
+        short_name: 'Triad',
+        start_url: './',
+        scope: './',
+        display: 'standalone',
+        background_color: '#0F1117',
+        theme_color: '#0F1117',
+        icons: [
+          {
+            src: iconUrl,
+            sizes: '512x512',
+            type: 'image/svg+xml',
+            purpose: 'any maskable',
+          },
+        ],
+      };
+      const blob = new Blob([JSON.stringify(manifest)], {
+        type: 'application/manifest+json',
+      });
+      document
+        .getElementById('pwa-manifest')
+        .setAttribute('href', URL.createObjectURL(blob));
+    })();
+  </script>
+
+  <!-- Triad Application Code -->
+  <script type="text/babel">
+    const { useState, useEffect, useMemo, useRef } = React;
+
+    // Clean inline SVG icons (zero external icon bundle dependencies)
+    const Icon = {
+      Check: ({ className = 'w-4 h-4' }) => (
+        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
+      ),
+      Plus: ({ className = 'w-5 h-5' }) => (
+        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.75" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19" />
+          <line x1="5" y1="12" x2="19" y2="12" />
+        </svg>
+      ),
+      Lock: ({ className = 'w-3 h-3' }) => (
+        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+        </svg>
+      ),
+      X: ({ className = 'w-4 h-4' }) => (
+        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18" />
+          <line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
+      ),
+      RotateCcw: ({ className = 'w-3 h-3' }) => (
+        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="1 4 1 10 7 10" />
+          <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+        </svg>
+      ),
+      CornerUpLeft: ({ className = 'w-4 h-4' }) => (
+        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="9 14 4 9 9 4" />
+          <path d="M20 20v-7a4 4 0 0 0-4-4H4" />
+        </svg>
+      ),
+      ChevronDown: ({ className = 'w-3.5 h-3.5' }) => (
+        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      ),
+      ChevronUp: ({ className = 'w-3.5 h-3.5' }) => (
+        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="18 15 12 9 6 15" />
+        </svg>
+      ),
+      ArrowUp: ({ className = 'w-3.5 h-3.5' }) => (
+        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="12" y1="19" x2="12" y2="5" />
+          <polyline points="5 12 12 5 19 12" />
+        </svg>
+      ),
+      ArrowRight: ({ className = 'w-3.5 h-3.5' }) => (
+        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="5" y1="12" x2="19" y2="12" />
+          <polyline points="12 5 19 12 12 19" />
+        </svg>
+      ),
+      Briefcase: ({ className = 'w-4 h-4' }) => (
+        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+          <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+        </svg>
+      ),
+      Sparkles: ({ className = 'w-4 h-4' }) => (
+        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round">
+          <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z" />
+        </svg>
+      ),
+      Moon: ({ className = 'w-3.5 h-3.5' }) => (
+        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
+        </svg>
+      ),
+    };
+
+    const STORAGE_KEY = 'triad_sunlit_tasks_v3';
+
+    const INITIAL_TASKS = [
+      {
+        id: 'triad-1',
+        title: 'Finalize Q4 product roadmap deck',
+        category: 'Work',
+        status: 'active',
+        createdAt: Date.now() - 3600000 * 5,
+        completedAt: null,
+      },
+      {
+        id: 'triad-2',
+        title: 'Book annual dental & vision checkups',
+        category: 'Personal',
+        status: 'active',
+        createdAt: Date.now() - 3600000 * 4,
+        completedAt: null,
+      },
+      {
+        id: 'triad-3',
+        title: 'Review design system token PR',
+        category: 'Work',
+        status: 'backlog',
+        createdAt: Date.now() - 3600000 * 3,
+        completedAt: null,
+      },
+      {
+        id: 'triad-4',
+        title: 'Pick up espresso beans & sourdough',
+        category: 'Personal',
+        status: 'backlog',
+        createdAt: Date.now() - 3600000 * 2,
+        completedAt: null,
+      },
+      {
+        id: 'triad-5',
+        title: 'Draft Friday engineering all-hands notes',
+        category: 'Work',
+        status: 'backlog',
+        createdAt: Date.now() - 3600000 * 1,
+        completedAt: null,
+      },
+    ];
+
+    const generateId = () =>
+      typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `task-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+
+    const formatHeaderDate = () => {
+      try {
+        return new Intl.DateTimeFormat('en-US', {
+          weekday: 'long',
+          month: 'short',
+          day: 'numeric',
+        })
+          .format(new Date())
+          .toUpperCase();
+      } catch {
+        return 'TODAY';
+      }
+    };
+
+    const PlayfulSlotMeter = ({ activeTasks, isLocked, isShaking }) => {
+      const activeCount = activeTasks.length;
+
+      return (
+        <div
+          className={`inline-flex items-center gap-2.5 px-3.5 py-2 rounded-2xl border transition-all duration-300 ${
+            isLocked
+              ? 'bg-amber-500/15 border-amber-400/40 text-amber-200 shadow-[0_0_18px_rgba(251,191,36,0.16)]'
+              : 'bg-zinc-900/90 border-zinc-800 text-zinc-100 shadow-[0_4px_12px_rgba(0,0,0,0.3)]'
+          } ${isShaking ? 'scale-105 ring-2 ring-amber-400/70' : ''}`}
+          aria-label={`Focus capacity: ${activeCount} of 3 slots active`}
+        >
+          <div className="flex items-center gap-1.5" aria-hidden="true">
+            {[0, 1, 2].map((idx) => {
+              const task = activeTasks[idx];
+              let pillClass = 'w-2.5 h-5 rounded-full bg-zinc-800';
+              if (task) {
+                if (isLocked) {
+                  pillClass =
+                    'w-3 h-5 rounded-full bg-gradient-to-b from-amber-300 to-orange-500 shadow-[0_0_10px_rgba(251,191,36,0.45)]';
+                } else if (task.category === 'Work') {
+                  pillClass =
+                    'w-3 h-5 rounded-full bg-gradient-to-b from-rose-400 to-orange-500 shadow-[0_0_10px_rgba(244,63,94,0.45)]';
+                } else {
+                  pillClass =
+                    'w-3 h-5 rounded-full bg-gradient-to-b from-emerald-300 to-teal-500 shadow-[0_0_10px_rgba(16,185,129,0.45)]';
+                }
+              }
+              return (
+                <span
+                  key={idx}
+                  className={`${pillClass} transition-all duration-300`}
+                />
+              );
+            })}
+          </div>
+
+          <div className="flex flex-col leading-none">
+            <span className="text-xs font-extrabold tabular-nums tracking-tight">
+              {activeCount}/3 {isLocked ? 'Full' : 'Active'}
+            </span>
+            <span className="text-[10px] font-semibold text-zinc-400 mt-0.5">
+              {isLocked ? 'Finish 1 first' : `${3 - activeCount} open`}
+            </span>
+          </div>
+        </div>
+      );
+    };
+
+    const CategoryBadge = ({ category }) => {
+      const isWork = category === 'Work';
+      return (
+        <span
+          className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold tracking-tight ${
+            isWork
+              ? 'bg-rose-500/15 text-rose-300 border border-rose-500/25'
+              : 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/25'
+          }`}
+        >
+          <span
+            className={`w-1.5 h-1.5 rounded-full ${
+              isWork ? 'bg-rose-400' : 'bg-emerald-400'
+            }`}
+            aria-hidden="true"
+          />
+          <span>{category}</span>
+        </span>
+      );
+    };
+
+    function App() {
+      const [tasks, setTasks] = useState(() => {
+        try {
+          const saved = window.localStorage.getItem(STORAGE_KEY);
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed)) return parsed;
+          }
+        } catch (err) {
+          console.error('Failed to read tasks:', err);
+        }
+        return INITIAL_TASKS;
+      });
+
+      const [filter, setFilter] = useState('All');
+      const [isSheetOpen, setIsSheetOpen] = useState(false);
+      const [newTitle, setNewTitle] = useState('');
+      const [newCategory, setNewCategory] = useState('Work');
+      const [isCompletedOpen, setIsCompletedOpen] = useState(false);
+      const [completingId, setCompletingId] = useState(null);
+      const [toast, setToast] = useState('');
+      const [shakeMeter, setShakeMeter] = useState(false);
+
+      const titleInputRef = useRef(null);
+      const formattedDate = useMemo(() => formatHeaderDate(), []);
+
+      useEffect(() => {
+        try {
+          window.localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+        } catch (err) {
+          console.error('Failed to save tasks:', err);
+        }
+      }, [tasks]);
+
+      useEffect(() => {
+        if (isSheetOpen) {
+          const timer = setTimeout(() => titleInputRef.current?.focus(), 60);
+          return () => clearTimeout(timer);
+        }
+      }, [isSheetOpen]);
+
+      useEffect(() => {
+        const onKeyDown = (e) => {
+          if (e.key === 'Escape' && isSheetOpen) setIsSheetOpen(false);
+        };
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+      }, [isSheetOpen]);
+
+      useEffect(() => {
+        if (!toast) return;
+        const timer = setTimeout(() => setToast(''), 2600);
+        return () => clearTimeout(timer);
+      }, [toast]);
+
+      const allActive = useMemo(
+        () => tasks.filter((t) => t.status === 'active'),
+        [tasks]
+      );
+      const allQueue = useMemo(
+        () => tasks.filter((t) => t.status === 'backlog'),
+        [tasks]
+      );
+      const allCompleted = useMemo(
+        () =>
+          tasks
+            .filter((t) => t.status === 'completed')
+            .sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0)),
+        [tasks]
+      );
+
+      const activeCount = allActive.length;
+      const isLocked = activeCount >= 3;
+      const openSlotsCount = Math.max(0, 3 - activeCount);
+
+      const filterCounts = useMemo(() => {
+        const nonCompleted = tasks.filter((t) => t.status !== 'completed');
+        return {
+          All: nonCompleted.length,
+          Work: nonCompleted.filter((t) => t.category === 'Work').length,
+          Personal: nonCompleted.filter((t) => t.category === 'Personal').length,
+        };
+      }, [tasks]);
+
+      const visibleActive = useMemo(
+        () =>
+          filter === 'All'
+            ? allActive
+            : allActive.filter((t) => t.category === filter),
+        [allActive, filter]
+      );
+
+      const hiddenActiveCount = useMemo(
+        () =>
+          filter === 'All'
+            ? 0
+            : allActive.filter((t) => t.category !== filter).length,
+        [allActive, filter]
+      );
+
+      const visibleQueue = useMemo(
+        () =>
+          filter === 'All'
+            ? allQueue
+            : allQueue.filter((t) => t.category === filter),
+        [allQueue, filter]
+      );
+
+      const visibleCompleted = useMemo(
+        () =>
+          filter === 'All'
+            ? allCompleted
+            : allCompleted.filter((t) => t.category === filter),
+        [allCompleted, filter]
+      );
+
+      const triggerToast = (message) => setToast(message);
+
+      const triggerLockedFeedback = () => {
+        setShakeMeter(true);
+        triggerToast('3/3 active! Complete one task to unlock a spot.');
+        setTimeout(() => setShakeMeter(false), 450);
+      };
+
+      const handleFilterChange = (nextTab) => {
+        setFilter(nextTab);
+        if (nextTab === 'Work' || nextTab === 'Personal') {
+          setNewCategory(nextTab);
+        }
+      };
+
+      const openAddSheet = () => {
+        if (filter === 'Work' || filter === 'Personal') {
+          setNewCategory(filter);
+        }
+        setIsSheetOpen(true);
+      };
+
+      const handleAddTask = (e, targetMode = 'backlog') => {
+        if (e) e.preventDefault();
+        const cleanTitle = newTitle.trim();
+        if (!cleanTitle) {
+          titleInputRef.current?.focus();
+          return;
+        }
+
+        const canFocusNow = targetMode === 'active' && activeCount < 3;
+        const newTask = {
+          id: generateId(),
+          title: cleanTitle,
+          category: newCategory,
+          status: canFocusNow ? 'active' : 'backlog',
+          createdAt: Date.now(),
+          completedAt: null,
+        };
+
+        setTasks((prev) => [...prev, newTask]);
+        setNewTitle('');
+        setIsSheetOpen(false);
+        triggerToast(
+          canFocusNow ? 'Added straight to Focus!' : 'Added to Up Next'
+        );
+      };
+
+      const handleCompleteTask = (id) => {
+        if (completingId) return;
+        setCompletingId(id);
+
+        setTimeout(() => {
+          setTasks((prev) =>
+            prev.map((t) =>
+              t.id === id
+                ? { ...t, status: 'completed', completedAt: Date.now() }
+                : t
+            )
+          );
+          setCompletingId(null);
+          triggerToast('Nice work! 1 focus spot unlocked');
+        }, 220);
+      };
+
+      const handleReturnToQueue = (id) => {
+        setTasks((prev) =>
+          prev.map((t) => (t.id === id ? { ...t, status: 'backlog' } : t))
+        );
+        triggerToast('Moved back to Up Next');
+      };
+
+      const handlePromoteToFocus = (id) => {
+        if (activeCount >= 3) {
+          triggerLockedFeedback();
+          return;
+        }
+        setTasks((prev) =>
+          prev.map((t) => (t.id === id ? { ...t, status: 'active' } : t))
+        );
+        triggerToast('Moved to Focus Now');
+      };
+
+      const handleMoveUpInQueue = (id) => {
+        setTasks((prev) => {
+          const backlogItems = prev.filter((t) => t.status === 'backlog');
+          const visibleIds =
+            filter === 'All'
+              ? backlogItems.map((t) => t.id)
+              : backlogItems
+                  .filter((t) => t.category === filter)
+                  .map((t) => t.id);
+
+          const visibleIdx = visibleIds.indexOf(id);
+          if (visibleIdx <= 0) return prev;
+
+          const swapTargetId = visibleIds[visibleIdx - 1];
+          const idxA = prev.findIndex((t) => t.id === id);
+          const idxB = prev.findIndex((t) => t.id === swapTargetId);
+          if (idxA === -1 || idxB === -1) return prev;
+
+          const copy = [...prev];
+          const temp = copy[idxA];
+          copy[idxA] = copy[idxB];
+          copy[idxB] = temp;
+          return copy;
+        });
+      };
+
+      const handleDeleteTask = (id) => {
+        setTasks((prev) => prev.filter((t) => t.id !== id));
+        triggerToast('Task removed');
+      };
+
+      const handleRestoreTask = (id) => {
+        const nextStatus = activeCount < 3 ? 'active' : 'backlog';
+        setTasks((prev) =>
+          prev.map((t) =>
+            t.id === id ? { ...t, status: nextStatus, completedAt: null } : t
+          )
+        );
+        triggerToast(
+          nextStatus === 'active'
+            ? 'Restored to Focus Now'
+            : 'Restored to Up Next'
+        );
+      };
+
+      const handleResetDemoData = () => {
+        setTasks(INITIAL_TASKS);
+        setFilter('All');
+        setIsCompletedOpen(false);
+        triggerToast('Sample tasks restored');
+      };
+
+      return (
+        <div className="min-h-screen bg-[#07080B] sm:py-8 px-0 sm:px-4 flex items-center justify-center">
+          <div className="relative w-full max-w-[420px] min-h-screen sm:min-h-[780px] sm:max-h-[860px] bg-[#0F1117] sm:rounded-[38px] sm:border sm:border-zinc-800/90 sm:shadow-[0_28px_70px_-15px_rgba(0,0,0,0.85)] flex flex-col overflow-hidden">
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute -top-24 -right-16 w-60 h-60 rounded-full bg-gradient-to-br from-rose-500/15 via-amber-500/10 to-emerald-500/10 blur-3xl"
+            />
+
+            {/* Sticky Header */}
+            <header className="sticky top-0 z-20 bg-[#0F1117]/85 backdrop-blur-xl px-5 pt-5 pb-4 border-b border-zinc-800/80">
+              <div className="flex items-center justify-between gap-3 mb-4">
+                <div>
+                  <div className="inline-flex items-center gap-1.5 text-[11px] font-bold tracking-[0.09em] text-amber-300/85 uppercase">
+                    <Icon.Moon className="w-3.5 h-3.5 text-amber-400" />
+                    <span>{formattedDate}</span>
+                  </div>
+                  <h1 className="text-[28px] font-extrabold tracking-[-0.03em] text-white leading-tight">
+                    Triad
+                  </h1>
+                </div>
+
+                <PlayfulSlotMeter
+                  activeTasks={allActive}
+                  isLocked={isLocked}
+                  isShaking={shakeMeter}
+                />
+              </div>
+
+              <div
+                role="group"
+                aria-label="Filter tasks by context"
+                className="grid grid-cols-3 gap-1.5 p-1.5 rounded-2xl bg-zinc-900 border border-zinc-800/80"
+              >
+                {[
+                  {
+                    id: 'All',
+                    activeStyle: 'bg-zinc-100 text-zinc-950 shadow-sm',
+                    badgeStyle: 'bg-zinc-900/15 text-zinc-900',
+                  },
+                  {
+                    id: 'Work',
+                    activeStyle:
+                      'bg-gradient-to-r from-rose-500 to-orange-500 text-white shadow-[0_4px_14px_rgba(244,63,94,0.35)]',
+                    badgeStyle: 'bg-black/20 text-white',
+                  },
+                  {
+                    id: 'Personal',
+                    activeStyle:
+                      'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-[0_4px_14px_rgba(16,185,129,0.35)]',
+                    badgeStyle: 'bg-black/20 text-white',
+                  },
+                ].map((tab) => {
+                  const isSelected = filter === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      aria-pressed={isSelected}
+                      onClick={() => handleFilterChange(tab.id)}
+                      className={`min-h-[38px] rounded-xl text-xs font-bold inline-flex items-center justify-center gap-1.5 transition-all duration-200 cursor-pointer focus:outline-none ${
+                        isSelected
+                          ? tab.activeStyle
+                          : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/70'
+                      }`}
+                    >
+                      <span>{tab.id}</span>
+                      <span
+                        className={`px-1.5 py-0.2 rounded-full text-[10px] tabular-nums ${
+                          isSelected
+                            ? tab.badgeStyle
+                            : 'bg-zinc-800 text-zinc-400'
+                        }`}
+                      >
+                        {filterCounts[tab.id]}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </header>
+
+            {toast && (
+              <div
+                role="status"
+                aria-live="polite"
+                className="pointer-events-none absolute top-32 left-1/2 -translate-x-1/2 z-40 w-max max-w-[90%] px-4 py-2 rounded-full bg-zinc-100 text-zinc-950 text-xs font-bold shadow-[0_10px_25px_rgba(0,0,0,0.6)] transition-all"
+              >
+                {toast}
+              </div>
+            )}
+
+            {/* Main Content */}
+            <main className="flex-1 overflow-y-auto px-5 pt-5 pb-28 space-y-7">
+              <section aria-labelledby="focus-now-heading">
+                <div className="flex items-center justify-between gap-2 mb-3">
+                  <h2
+                    id="focus-now-heading"
+                    className="text-[11px] font-extrabold uppercase tracking-[0.09em] text-zinc-400"
+                  >
+                    Focus Now (Max 3)
+                  </h2>
+
+                  {isLocked && (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/15 border border-amber-400/30 text-amber-300 text-[11px] font-bold">
+                      <Icon.Lock className="w-3 h-3 text-amber-400" />
+                      <span>Locked 3/3 — Finish 1 to unlock</span>
+                    </span>
+                  )}
+                </div>
+
+                <div className="space-y-3">
+                  {visibleActive.map((task) => {
+                    const isWork = task.category === 'Work';
+                    const isPopping = completingId === task.id;
+
+                    return (
+                      <article
+                        key={task.id}
+                        className={`group relative overflow-hidden rounded-3xl border transition-all duration-200 ${
+                          isWork
+                            ? 'bg-gradient-to-r from-rose-500/[0.12] via-[#171A23] to-[#171A23] border-rose-500/30 shadow-[0_8px_22px_-8px_rgba(244,63,94,0.28)]'
+                            : 'bg-gradient-to-r from-emerald-500/[0.12] via-[#171A23] to-[#171A23] border-emerald-500/30 shadow-[0_8px_22px_-8px_rgba(16,185,129,0.28)]'
+                        } ${isPopping ? 'scale-[0.96] opacity-40' : ''}`}
+                      >
+                        <div className="flex items-center gap-3.5 px-4 py-4">
+                          <button
+                            type="button"
+                            onClick={() => handleCompleteTask(task.id)}
+                            aria-label={`Complete "${task.title}"`}
+                            className={`w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 transition-all duration-200 cursor-pointer active:scale-90 focus:outline-none ${
+                              isPopping
+                                ? 'bg-emerald-500 border-emerald-500 text-white scale-110'
+                                : isWork
+                                ? 'border-rose-400/70 bg-zinc-900/80 text-transparent hover:border-rose-400 hover:bg-rose-500 hover:text-white'
+                                : 'border-emerald-400/70 bg-zinc-900/80 text-transparent hover:border-emerald-400 hover:bg-emerald-500 hover:text-white'
+                            }`}
+                          >
+                            <Icon.Check className="w-4 h-4" />
+                          </button>
+
+                          <div className="flex-1 min-w-0">
+                            <h3 className="text-[15px] font-bold text-zinc-50 leading-snug tracking-[-0.01em] break-words">
+                              {task.title}
+                            </h3>
+                            <div className="mt-1.5">
+                              <CategoryBadge category={task.category} />
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => handleReturnToQueue(task.id)}
+                            aria-label={`Move "${task.title}" back to queue`}
+                            title="Move back to queue"
+                            className="w-8 h-8 rounded-full text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 flex items-center justify-center shrink-0 transition-colors cursor-pointer"
+                          >
+                            <Icon.CornerUpLeft className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </article>
+                    );
+                  })}
+
+                  {hiddenActiveCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => handleFilterChange('All')}
+                      className="w-full flex items-center justify-between px-4 py-3 rounded-2xl bg-amber-500/10 border border-amber-400/25 text-xs font-bold text-amber-200 hover:bg-amber-500/15 transition-colors cursor-pointer"
+                    >
+                      <span>
+                        {hiddenActiveCount}{' '}
+                        {hiddenActiveCount === 1 ? 'spot' : 'spots'} used by{' '}
+                        {filter === 'Work' ? 'Personal' : 'Work'}
+                      </span>
+                      <span className="text-rose-400">Show All →</span>
+                    </button>
+                  )}
+
+                  {Array.from({ length: openSlotsCount }).map((_, idx) => {
+                    const slotNumber = activeCount + idx + 1;
+                    return (
+                      <div
+                        key={`open-slot-${slotNumber}`}
+                        className="rounded-3xl border-2 border-dashed border-zinc-800 bg-zinc-900/40 px-4 py-4 flex items-center gap-3"
+                      >
+                        <span className="w-7 h-7 rounded-full bg-amber-500/15 text-amber-300 border border-amber-400/25 flex items-center justify-center text-xs font-extrabold tabular-nums">
+                          {slotNumber}
+                        </span>
+                        <span className="text-xs font-semibold text-zinc-400">
+                          Open Focus Spot — Pick one from Up Next
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+
+              {/* Up Next Queue */}
+              <section aria-labelledby="up-next-heading">
+                <div className="flex items-center justify-between mb-3">
+                  <h2
+                    id="up-next-heading"
+                    className="text-[11px] font-extrabold uppercase tracking-[0.09em] text-zinc-400"
+                  >
+                    Up Next ({visibleQueue.length})
+                  </h2>
+                </div>
+
+                {visibleQueue.length === 0 ? (
+                  <div className="rounded-3xl bg-[#161922] border border-zinc-800/80 py-9 px-5 text-center">
+                    <Icon.Sparkles className="w-5 h-5 text-amber-400 mx-auto mb-2" />
+                    <p className="text-sm font-bold text-zinc-200">
+                      {filter === 'All'
+                        ? 'Nothing waiting in line'
+                        : `No ${filter} tasks queued`}
+                    </p>
+                    <p className="text-xs text-zinc-500 mt-0.5">
+                      Tap "+ Add Task" below whenever an idea pops up.
+                    </p>
+                  </div>
+                ) : (
+                  <ul className="space-y-2.5">
+                    {visibleQueue.map((task, idx) => {
+                      const isWork = task.category === 'Work';
+                      return (
+                        <li
+                          key={task.id}
+                          className="bg-[#161922] rounded-2xl border border-zinc-800/90 px-3.5 py-3 shadow-[0_2px_8px_rgba(0,0,0,0.25)] flex items-center gap-2.5 transition-all hover:border-zinc-700"
+                        >
+                          <button
+                            type="button"
+                            disabled={idx === 0}
+                            onClick={() => handleMoveUpInQueue(task.id)}
+                            aria-label={`Move "${task.title}" higher in queue`}
+                            className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 transition-colors ${
+                              idx === 0
+                                ? 'text-zinc-700 cursor-default'
+                                : 'text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 cursor-pointer'
+                            }`}
+                          >
+                            <Icon.ArrowUp className="w-3.5 h-3.5" />
+                          </button>
+
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[14px] font-bold text-zinc-100 leading-snug tracking-[-0.01em] break-words">
+                              {task.title}
+                            </p>
+                            <div className="mt-1.5">
+                              <CategoryBadge category={task.category} />
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1 shrink-0">
+                            {isLocked ? (
+                              <button
+                                type="button"
+                                onClick={triggerLockedFeedback}
+                                aria-disabled="true"
+                                className="min-h-[34px] px-2.5 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-500 text-xs font-bold inline-flex items-center gap-1 cursor-not-allowed hover:bg-amber-500/15 hover:text-amber-300 hover:border-amber-400/30 transition-colors"
+                              >
+                                <Icon.Lock className="w-3 h-3" />
+                                <span>Locked</span>
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handlePromoteToFocus(task.id)}
+                                className={`min-h-[34px] px-3 rounded-full text-white text-xs font-bold inline-flex items-center gap-1 active:scale-95 transition-all cursor-pointer ${
+                                  isWork
+                                    ? 'bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-600 hover:to-orange-600 shadow-[0_4px_12px_rgba(244,63,94,0.3)]'
+                                    : 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 shadow-[0_4px_12px_rgba(16,185,129,0.3)]'
+                                }`}
+                              >
+                                <span>Focus</span>
+                                <Icon.ArrowRight className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteTask(task.id)}
+                              aria-label={`Delete "${task.title}"`}
+                              className="w-7 h-7 rounded-full text-zinc-600 hover:text-rose-400 hover:bg-rose-500/15 flex items-center justify-center transition-colors cursor-pointer"
+                            >
+                              <Icon.X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </section>
+
+              {/* Completed Drawer */}
+              <section
+                aria-label="Completed tasks"
+                className="pt-1 flex flex-col items-center"
+              >
+                <button
+                  type="button"
+                  aria-expanded={isCompletedOpen}
+                  onClick={() => setIsCompletedOpen((prev) => !prev)}
+                  className="min-h-[38px] inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#161922] border border-zinc-800 hover:border-zinc-700 text-xs font-bold text-zinc-400 hover:text-zinc-200 transition-all cursor-pointer"
+                >
+                  <span>Completed ({visibleCompleted.length})</span>
+                  {isCompletedOpen ? (
+                    <Icon.ChevronUp className="w-3.5 h-3.5 text-zinc-500" />
+                  ) : (
+                    <Icon.ChevronDown className="w-3.5 h-3.5 text-zinc-500" />
+                  )}
+                </button>
+
+                {isCompletedOpen && (
+                  <div className="w-full mt-3 bg-[#161922] rounded-3xl border border-zinc-800/90 p-4 space-y-3">
+                    {visibleCompleted.length === 0 ? (
+                      <p className="text-xs text-zinc-500 text-center py-2">
+                        No completed tasks yet. Check off an active task above!
+                      </p>
+                    ) : (
+                      <ul className="divide-y divide-zinc-800/80">
+                        {visibleCompleted.map((task) => (
+                          <li
+                            key={task.id}
+                            className="py-2.5 first:pt-0 last:pb-0 flex items-center justify-between gap-2.5"
+                          >
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs font-semibold text-zinc-500 line-through truncate">
+                                {task.title}
+                              </p>
+                              <div className="mt-1">
+                                <CategoryBadge category={task.category} />
+                              </div>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => handleRestoreTask(task.id)}
+                              className="min-h-[32px] px-2.5 rounded-full text-[11px] font-bold text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 inline-flex items-center gap-1 shrink-0 transition-colors cursor-pointer"
+                            >
+                              <Icon.RotateCcw className="w-3 h-3" />
+                              <span>Restore</span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+
+                    <div className="pt-2 border-t border-zinc-800/80 flex justify-center">
+                      <button
+                        type="button"
+                        onClick={handleResetDemoData}
+                        className="text-[11px] font-bold text-zinc-500 hover:text-rose-400 underline underline-offset-2 py-1 px-2 cursor-pointer transition-colors"
+                      >
+                        Reset Demo Data
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </section>
+            </main>
+
+            {/* Bottom Action Dock */}
+            <div className="sticky bottom-0 inset-x-0 z-20 px-5 py-4 bg-[#0F1117]/85 backdrop-blur-xl border-t border-zinc-800/80">
+              <button
+                type="button"
+                onClick={openAddSheet}
+                className="w-full min-h-[52px] rounded-full bg-gradient-to-r from-rose-500 via-orange-500 to-amber-500 hover:from-rose-600 hover:via-orange-600 hover:to-amber-600 active:scale-[0.99] text-white font-extrabold text-sm shadow-[0_10px_28px_-6px_rgba(244,63,94,0.45)] inline-flex items-center justify-center gap-2 transition-all cursor-pointer"
+              >
+                <Icon.Plus className="w-5 h-5" />
+                <span>Add Task</span>
+              </button>
+            </div>
+
+            {/* Slide-Up Bottom Sheet */}
+            {isSheetOpen && (
+              <div
+                className="absolute inset-0 z-50 flex items-end justify-center bg-black/70 backdrop-blur-[3px] transition-opacity"
+                onClick={() => setIsSheetOpen(false)}
+              >
+                <div
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="new-task-sheet-title"
+                  onClick={(e) => e.stopPropagation()}
+                  className="w-full bg-[#161922] rounded-t-[32px] border-t border-zinc-800 px-6 pt-3 pb-7 shadow-2xl space-y-4"
+                >
+                  <div className="flex justify-center" aria-hidden="true">
+                    <div className="w-10 h-1.5 rounded-full bg-zinc-700" />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <h2
+                      id="new-task-sheet-title"
+                      className="text-lg font-extrabold tracking-tight text-white"
+                    >
+                      New Task
+                    </h2>
+                    <button
+                      type="button"
+                      onClick={() => setIsSheetOpen(false)}
+                      aria-label="Close modal"
+                      className="w-8 h-8 rounded-full bg-zinc-800 text-zinc-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                    >
+                      <Icon.X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <form
+                    onSubmit={(e) => handleAddTask(e, 'backlog')}
+                    className="space-y-4"
+                  >
+                    <div>
+                      <label htmlFor="triad-task-title" className="sr-only">
+                        Task title
+                      </label>
+                      <input
+                        id="triad-task-title"
+                        ref={titleInputRef}
+                        type="text"
+                        value={newTitle}
+                        onChange={(e) => setNewTitle(e.target.value)}
+                        placeholder="What do you want to tackle?"
+                        className="w-full min-h-[50px] px-4 rounded-2xl bg-[#0F1117] border border-zinc-800 text-sm font-bold text-white placeholder:text-zinc-500 focus:outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 transition-all"
+                      />
+                    </div>
+
+                    <div
+                      role="group"
+                      aria-label="Select task context"
+                      className="grid grid-cols-2 gap-3"
+                    >
+                      <button
+                        type="button"
+                        aria-pressed={newCategory === 'Work'}
+                        onClick={() => setNewCategory('Work')}
+                        className={`min-h-[48px] px-4 rounded-2xl border text-xs font-extrabold inline-flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                          newCategory === 'Work'
+                            ? 'bg-gradient-to-r from-rose-500 to-orange-500 border-transparent text-white shadow-[0_6px_16px_rgba(244,63,94,0.3)]'
+                            : 'bg-[#0F1117] border-zinc-800 text-zinc-300 hover:border-zinc-700'
+                        }`}
+                      >
+                        <Icon.Briefcase className="w-4 h-4" />
+                        <span>Work</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        aria-pressed={newCategory === 'Personal'}
+                        onClick={() => setNewCategory('Personal')}
+                        className={`min-h-[48px] px-4 rounded-2xl border text-xs font-extrabold inline-flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                          newCategory === 'Personal'
+                            ? 'bg-gradient-to-r from-emerald-500 to-teal-500 border-transparent text-white shadow-[0_6px_16px_rgba(16,185,129,0.3)]'
+                            : 'bg-[#0F1117] border-zinc-800 text-zinc-300 hover:border-zinc-700'
+                        }`}
+                      >
+                        <Icon.Sparkles className="w-4 h-4" />
+                        <span>Personal</span>
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2.5 pt-1">
+                      <button
+                        type="submit"
+                        className="min-h-[48px] rounded-full bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-extrabold transition-colors cursor-pointer"
+                      >
+                        Add to Queue
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={isLocked}
+                        onClick={() => handleAddTask(null, 'active')}
+                        className={`min-h-[48px] rounded-full text-xs font-extrabold inline-flex items-center justify-center gap-1.5 transition-all ${
+                          isLocked
+                            ? 'bg-zinc-800/80 text-zinc-500 cursor-not-allowed'
+                            : 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-400/30 cursor-pointer'
+                        }`}
+                      >
+                        {isLocked ? (
+                          <>
+                            <Icon.Lock className="w-3.5 h-3.5" />
+                            <span>Full (3/3)</span>
+                          </>
+                        ) : (
+                          <span>Focus Now</span>
+                        )}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
