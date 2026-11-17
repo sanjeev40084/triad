@@ -144,11 +144,12 @@
     const GIST_FILENAME = 'triad-tasks-v2.json';
 
     const INITIAL_TASKS = [
-      { id: 'triad-1', title: 'Finalize Q4 product roadmap deck', category: 'Work', status: 'active', updatedAt: Date.now() - 3600000 * 5, completedAt: null },
-      { id: 'triad-2', title: 'Book annual dental & vision checkups', category: 'Personal', status: 'active', updatedAt: Date.now() - 3600000 * 4, completedAt: null },
-      { id: 'triad-3', title: 'Review design system token PR', category: 'Work', status: 'backlog', updatedAt: Date.now() - 3600000 * 3, completedAt: null },
-      { id: 'triad-4', title: 'Pick up espresso beans & sourdough', category: 'Personal', status: 'backlog', updatedAt: Date.now() - 3600000 * 2, completedAt: null },
-      { id: 'triad-5', title: 'Draft Friday engineering all-hands notes', category: 'Work', status: 'backlog', updatedAt: Date.now() - 3600000 * 1, completedAt: null },
+      { id: 'triad-1', title: 'Finalize Q4 product roadmap deck', category: 'Work', status: 'active', updatedAt: Date.now() - 3600000 * 6, completedAt: null },
+      { id: 'triad-2', title: 'Prepare PAC CLI standard operating procedures', category: 'Work', status: 'active', updatedAt: Date.now() - 3600000 * 5, completedAt: null },
+      { id: 'triad-3', title: 'Book annual dental & vision checkups', category: 'Personal', status: 'active', updatedAt: Date.now() - 3600000 * 4, completedAt: null },
+      { id: 'triad-4', title: 'Review design system token PR', category: 'Work', status: 'backlog', updatedAt: Date.now() - 3600000 * 3, completedAt: null },
+      { id: 'triad-5', title: 'Draft Friday engineering all-hands notes', category: 'Work', status: 'backlog', updatedAt: Date.now() - 3600000 * 2, completedAt: null },
+      { id: 'triad-6', title: 'Pick up espresso beans & sourdough', category: 'Personal', status: 'backlog', updatedAt: Date.now() - 3600000 * 1, completedAt: null },
     ];
 
     const generateId = () => typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `task-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
@@ -156,25 +157,37 @@
       try { return new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'short', day: 'numeric' }).format(new Date()).toUpperCase(); } catch { return 'TODAY'; }
     };
 
-    const PlayfulSlotMeter = ({ activeTasks, isLocked, isShaking }) => {
+    const PlayfulSlotMeter = ({ activeTasks, category, isLocked, isShaking }) => {
       const activeCount = activeTasks.length;
+      const isWork = category === 'Work';
       return (
-        <div className={`inline-flex items-center gap-2.5 px-3.5 py-2 rounded-2xl border transition-all duration-300 ${isLocked ? 'bg-amber-500/15 border-amber-400/40 text-amber-200 shadow-[0_0_18px_rgba(251,191,36,0.16)]' : 'bg-zinc-900/90 border-zinc-800 text-zinc-100 shadow-[0_4px_12px_rgba(0,0,0,0.3)]'} ${isShaking ? 'scale-105 ring-2 ring-amber-400/70' : ''}`} aria-label={`Focus capacity: ${activeCount} of 3 slots active`}>
+        <div
+          className={`inline-flex items-center gap-2.5 px-3.5 py-2 rounded-2xl border transition-all duration-300 ${
+            isLocked
+              ? 'bg-amber-500/15 border-amber-400/40 text-amber-200 shadow-[0_0_18px_rgba(251,191,36,0.16)]'
+              : 'bg-zinc-900/90 border-zinc-800 text-zinc-100 shadow-[0_4px_12px_rgba(0,0,0,0.3)]'
+          } ${isShaking ? 'scale-105 ring-2 ring-amber-400/70' : ''}`}
+          aria-label={`${category} focus capacity: ${activeCount} of 3 slots active`}
+        >
           <div className="flex items-center gap-1.5" aria-hidden="true">
             {[0, 1, 2].map((idx) => {
               const task = activeTasks[idx];
               let pillClass = 'w-2.5 h-5 rounded-full bg-zinc-800';
               if (task) {
                 if (isLocked) pillClass = 'w-3 h-5 rounded-full bg-gradient-to-b from-amber-300 to-orange-500 shadow-[0_0_10px_rgba(251,191,36,0.45)]';
-                else if (task.category === 'Work') pillClass = 'w-3 h-5 rounded-full bg-gradient-to-b from-rose-400 to-orange-500 shadow-[0_0_10px_rgba(244,63,94,0.45)]';
+                else if (isWork) pillClass = 'w-3 h-5 rounded-full bg-gradient-to-b from-rose-400 to-orange-500 shadow-[0_0_10px_rgba(244,63,94,0.45)]';
                 else pillClass = 'w-3 h-5 rounded-full bg-gradient-to-b from-emerald-300 to-teal-500 shadow-[0_0_10px_rgba(16,185,129,0.45)]';
               }
               return <span key={idx} className={`${pillClass} transition-all duration-300`} />;
             })}
           </div>
           <div className="flex flex-col leading-none">
-            <span className="text-xs font-extrabold tabular-nums tracking-tight">{activeCount}/3 {isLocked ? 'Full' : 'Active'}</span>
-            <span className="text-[10px] font-semibold text-zinc-400 mt-0.5">{isLocked ? 'Finish 1 first' : `${3 - activeCount} open`}</span>
+            <span className="text-xs font-extrabold tabular-nums tracking-tight">
+              {activeCount}/3 {category}
+            </span>
+            <span className="text-[10px] font-semibold text-zinc-400 mt-0.5">
+              {isLocked ? 'Finish 1 first' : `${3 - activeCount} open`}
+            </span>
           </div>
         </div>
       );
@@ -225,7 +238,8 @@
       const isConfigured = Boolean(syncConfig.token && syncConfig.gistId);
       const skipNextPushRef = useRef(false);
 
-      const [filter, setFilter] = useState('All');
+      // Strictly 2 tabs: 'Work' | 'Personal' (no 'All' tab)
+      const [filter, setFilter] = useState('Work');
       const [isSheetOpen, setIsSheetOpen] = useState(false);
       const [newTitle, setNewTitle] = useState('');
       const [newCategory, setNewCategory] = useState('Work');
@@ -535,43 +549,45 @@
         }
       };
 
-      const allActive = useMemo(() => tasks.filter((t) => t.status === 'active'), [tasks]);
-      const allQueue = useMemo(() => tasks.filter((t) => t.status === 'backlog'), [tasks]);
-      const allWaiting = useMemo(() => tasks.filter((t) => t.status === 'waiting'), [tasks]);
-      const allCompleted = useMemo(() => tasks.filter((t) => t.status === 'completed').sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0)), [tasks]);
+      // Independent Work (3 Max) and Personal (3 Max) partitions
+      const workActive = useMemo(() => tasks.filter((t) => t.status === 'active' && t.category === 'Work'), [tasks]);
+      const personalActive = useMemo(() => tasks.filter((t) => t.status === 'active' && t.category === 'Personal'), [tasks]);
 
-      const activeCount = allActive.length;
+      const visibleActive = useMemo(() => filter === 'Work' ? workActive : personalActive, [filter, workActive, personalActive]);
+      const visibleQueue = useMemo(() => tasks.filter((t) => t.status === 'backlog' && t.category === filter), [tasks, filter]);
+      const visibleWaiting = useMemo(() => tasks.filter((t) => t.status === 'waiting' && t.category === filter), [tasks, filter]);
+      const visibleCompleted = useMemo(() => tasks.filter((t) => t.status === 'completed' && t.category === filter).sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0)), [tasks, filter]);
+
+      // Independent 3-slot capacity metrics for the currently active tab
+      const activeCount = visibleActive.length;
       const isLocked = activeCount >= 3;
       const openSlotsCount = Math.max(0, 3 - activeCount);
+
+      // Capacity check for the category selected inside the "+ Add Task" modal
+      const modalCategoryActiveCount = newCategory === 'Work' ? workActive.length : personalActive.length;
+      const isModalCategoryLocked = modalCategoryActiveCount >= 3;
 
       const filterCounts = useMemo(() => {
         const nonCompleted = tasks.filter((t) => t.status !== 'completed');
         return {
-          All: nonCompleted.length,
           Work: nonCompleted.filter((t) => t.category === 'Work').length,
           Personal: nonCompleted.filter((t) => t.category === 'Personal').length,
         };
       }, [tasks]);
 
-      const visibleActive = useMemo(() => filter === 'All' ? allActive : allActive.filter((t) => t.category === filter), [allActive, filter]);
-      const hiddenActiveCount = useMemo(() => filter === 'All' ? 0 : allActive.filter((t) => t.category !== filter).length, [allActive, filter]);
-      const visibleQueue = useMemo(() => filter === 'All' ? allQueue : allQueue.filter((t) => t.category === filter), [allQueue, filter]);
-      const visibleWaiting = useMemo(() => filter === 'All' ? allWaiting : allWaiting.filter((t) => t.category === filter), [allWaiting, filter]);
-      const visibleCompleted = useMemo(() => filter === 'All' ? allCompleted : allCompleted.filter((t) => t.category === filter), [allCompleted, filter]);
-
-      const triggerLockedFeedback = () => {
+      const triggerLockedFeedback = (cat = filter) => {
         setShakeMeter(true);
-        triggerToast('3/3 active! Complete or park a task to unlock.');
+        triggerToast(`3/3 ${cat} active! Complete or park 1 ${cat} task to unlock.`);
         setTimeout(() => setShakeMeter(false), 450);
       };
 
       const handleFilterChange = (nextTab) => {
         setFilter(nextTab);
-        if (nextTab === 'Work' || nextTab === 'Personal') setNewCategory(nextTab);
+        setNewCategory(nextTab);
       };
 
       const openAddSheet = () => {
-        if (filter === 'Work' || filter === 'Personal') setNewCategory(filter);
+        setNewCategory(filter);
         setIsSheetOpen(true);
       };
 
@@ -583,7 +599,8 @@
           return;
         }
 
-        const canFocusNow = targetMode === 'active' && activeCount < 3;
+        const catActiveCount = tasks.filter((t) => t.status === 'active' && t.category === newCategory).length;
+        const canFocusNow = targetMode === 'active' && catActiveCount < 3;
         const newTask = {
           id: generateId(),
           title: cleanTitle,
@@ -595,8 +612,9 @@
 
         setTasks((prev) => [...prev, newTask]);
         setNewTitle('');
+        setFilter(newCategory);
         setIsSheetOpen(false);
-        triggerToast(canFocusNow ? 'Added straight to Focus!' : 'Added to Up Next');
+        triggerToast(canFocusNow ? `Added to ${newCategory} Focus!` : `Added to ${newCategory} Up Next`);
       };
 
       const handleCompleteTask = (id) => {
@@ -605,7 +623,7 @@
         setTimeout(() => {
           setTasks((prev) => prev.map((t) => t.id === id ? { ...t, status: 'completed', completedAt: Date.now(), updatedAt: Date.now() } : t));
           setCompletingId(null);
-          triggerToast('Nice work! 1 focus spot unlocked');
+          triggerToast(`Nice work! 1 ${filter} focus spot unlocked`);
         }, 220);
       };
 
@@ -620,8 +638,11 @@
       };
 
       const handleUnparkTask = (id) => {
-        if (activeCount >= 3) {
-          triggerLockedFeedback();
+        const target = tasks.find((t) => t.id === id);
+        if (!target) return;
+        const catActiveCount = tasks.filter((t) => t.status === 'active' && t.category === target.category).length;
+        if (catActiveCount >= 3) {
+          triggerLockedFeedback(target.category);
           return;
         }
         setTasks((prev) => prev.map((t) => t.id === id ? { ...t, status: 'active', updatedAt: Date.now() } : t));
@@ -629,8 +650,11 @@
       };
 
       const handlePromoteToFocus = (id) => {
-        if (activeCount >= 3) {
-          triggerLockedFeedback();
+        const target = tasks.find((t) => t.id === id);
+        if (!target) return;
+        const catActiveCount = tasks.filter((t) => t.status === 'active' && t.category === target.category).length;
+        if (catActiveCount >= 3) {
+          triggerLockedFeedback(target.category);
           return;
         }
         setTasks((prev) => prev.map((t) => t.id === id ? { ...t, status: 'active', updatedAt: Date.now() } : t));
@@ -644,7 +668,10 @@
       };
 
       const handleRestoreTask = (id) => {
-        const nextStatus = activeCount < 3 ? 'active' : 'backlog';
+        const target = tasks.find((t) => t.id === id);
+        if (!target) return;
+        const catActiveCount = tasks.filter((t) => t.status === 'active' && t.category === target.category).length;
+        const nextStatus = catActiveCount < 3 ? 'active' : 'backlog';
         setTasks((prev) => prev.map((t) => t.id === id ? { ...t, status: nextStatus, completedAt: null, updatedAt: Date.now() } : t));
         triggerToast(nextStatus === 'active' ? 'Restored to Focus Now' : 'Restored to Up Next');
       };
@@ -661,11 +688,13 @@
       const handleResetDemoData = () => {
         setTasks(INITIAL_TASKS);
         setDeletedIds([]);
-        setFilter('All');
+        setFilter('Work');
         setIsCompletedOpen(false);
         setIsWaitingOpen(false);
         triggerToast('Sample tasks restored');
       };
+
+      const isWorkTab = filter === 'Work';
 
       return (
         <div className="min-h-screen bg-[#07080B] md:py-8 md:px-6 lg:px-10 flex items-start justify-center">
@@ -716,14 +745,14 @@
                   </div>
                 </div>
 
-                {/* Desktop Filter Pills */}
-                <div role="group" aria-label="Filter tasks by context" className="hidden md:grid grid-cols-3 gap-1.5 p-1.5 rounded-2xl bg-zinc-900 border border-zinc-800/80 min-w-[320px]">
+                {/* Desktop 2-Tab Mode Switcher (Work vs Personal) */}
+                <div role="group" aria-label="Switch workspace context" className="hidden md:grid grid-cols-2 gap-1.5 p-1.5 rounded-2xl bg-zinc-900 border border-zinc-800/80 min-w-[280px]">
                   {[
-                    { id: 'All', activeStyle: 'bg-zinc-100 text-zinc-950 shadow-sm', badgeStyle: 'bg-zinc-900/15 text-zinc-900' },
-                    { id: 'Work', activeStyle: 'bg-gradient-to-r from-rose-500 to-orange-500 text-white shadow-[0_4px_14px_rgba(244,63,94,0.35)]', badgeStyle: 'bg-black/20 text-white' },
-                    { id: 'Personal', activeStyle: 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-[0_4px_14px_rgba(16,185,129,0.35)]', badgeStyle: 'bg-black/20 text-white' },
+                    { id: 'Work', icon: Icon.Briefcase, activeStyle: 'bg-gradient-to-r from-rose-500 to-orange-500 text-white shadow-[0_4px_14px_rgba(244,63,94,0.35)]', badgeStyle: 'bg-black/20 text-white' },
+                    { id: 'Personal', icon: Icon.Sparkles, activeStyle: 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-[0_4px_14px_rgba(16,185,129,0.35)]', badgeStyle: 'bg-black/20 text-white' },
                   ].map((tab) => {
                     const isSelected = filter === tab.id;
+                    const TabIcon = tab.icon;
                     return (
                       <button
                         key={tab.id}
@@ -732,6 +761,7 @@
                         onClick={() => handleFilterChange(tab.id)}
                         className={`min-h-[38px] px-4 rounded-xl text-xs font-bold inline-flex items-center justify-center gap-1.5 transition-all duration-200 cursor-pointer focus:outline-none ${isSelected ? tab.activeStyle : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/70'}`}
                       >
+                        <TabIcon className="w-3.5 h-3.5" />
                         <span>{tab.id}</span>
                         <span className={`px-1.5 py-0.2 rounded-full text-[10px] tabular-nums ${isSelected ? tab.badgeStyle : 'bg-zinc-800 text-zinc-400'}`}>
                           {filterCounts[tab.id]}
@@ -743,34 +773,39 @@
 
                 {/* Right Header Controls */}
                 <div className="flex items-center gap-3">
-                  <PlayfulSlotMeter activeTasks={allActive} isLocked={isLocked} isShaking={shakeMeter} />
+                  <PlayfulSlotMeter activeTasks={visibleActive} category={filter} isLocked={isLocked} isShaking={shakeMeter} />
                   <button
                     type="button"
                     onClick={openAddSheet}
-                    className="hidden md:inline-flex min-h-[44px] px-5 rounded-2xl bg-gradient-to-r from-rose-500 via-orange-500 to-amber-500 hover:from-rose-600 hover:via-orange-600 hover:to-amber-600 active:scale-[0.98] text-white font-extrabold text-xs shadow-[0_8px_22px_-6px_rgba(244,63,94,0.45)] items-center justify-center gap-2 transition-all cursor-pointer"
+                    className={`hidden md:inline-flex min-h-[44px] px-5 rounded-2xl active:scale-[0.98] text-white font-extrabold text-xs items-center justify-center gap-2 transition-all cursor-pointer ${
+                      isWorkTab
+                        ? 'bg-gradient-to-r from-rose-500 via-orange-500 to-amber-500 hover:from-rose-600 hover:via-orange-600 hover:to-amber-600 shadow-[0_8px_22px_-6px_rgba(244,63,94,0.45)]'
+                        : 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 shadow-[0_8px_22px_-6px_rgba(16,185,129,0.45)]'
+                    }`}
                   >
                     <Icon.Plus className="w-4 h-4" />
-                    <span>Add Task</span>
+                    <span>Add {filter} Task</span>
                   </button>
                 </div>
               </div>
 
-              {/* Mobile Filter Pills */}
-              <div role="group" aria-label="Filter tasks by context" className="grid md:hidden grid-cols-3 gap-1.5 p-1.5 rounded-2xl bg-zinc-900 border border-zinc-800/80">
+              {/* Mobile 2-Tab Mode Switcher (Work vs Personal) */}
+              <div role="group" aria-label="Switch workspace context" className="grid md:hidden grid-cols-2 gap-1.5 p-1.5 rounded-2xl bg-zinc-900 border border-zinc-800/80">
                 {[
-                  { id: 'All', activeStyle: 'bg-zinc-100 text-zinc-950 shadow-sm', badgeStyle: 'bg-zinc-900/15 text-zinc-900' },
-                  { id: 'Work', activeStyle: 'bg-gradient-to-r from-rose-500 to-orange-500 text-white shadow-[0_4px_14px_rgba(244,63,94,0.35)]', badgeStyle: 'bg-black/20 text-white' },
-                  { id: 'Personal', activeStyle: 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-[0_4px_14px_rgba(16,185,129,0.35)]', badgeStyle: 'bg-black/20 text-white' },
+                  { id: 'Work', icon: Icon.Briefcase, activeStyle: 'bg-gradient-to-r from-rose-500 to-orange-500 text-white shadow-[0_4px_14px_rgba(244,63,94,0.35)]', badgeStyle: 'bg-black/20 text-white' },
+                  { id: 'Personal', icon: Icon.Sparkles, activeStyle: 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-[0_4px_14px_rgba(16,185,129,0.35)]', badgeStyle: 'bg-black/20 text-white' },
                 ].map((tab) => {
                   const isSelected = filter === tab.id;
+                  const TabIcon = tab.icon;
                   return (
                     <button
                       key={tab.id}
                       type="button"
                       aria-pressed={isSelected}
                       onClick={() => handleFilterChange(tab.id)}
-                      className={`min-h-[38px] rounded-xl text-xs font-bold inline-flex items-center justify-center gap-1.5 transition-all duration-200 cursor-pointer focus:outline-none ${isSelected ? tab.activeStyle : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/70'}`}
+                      className={`min-h-[40px] rounded-xl text-xs font-bold inline-flex items-center justify-center gap-1.5 transition-all duration-200 cursor-pointer focus:outline-none ${isSelected ? tab.activeStyle : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/70'}`}
                     >
+                      <TabIcon className="w-3.5 h-3.5" />
                       <span>{tab.id}</span>
                       <span className={`px-1.5 py-0.2 rounded-full text-[10px] tabular-nums ${isSelected ? tab.badgeStyle : 'bg-zinc-800 text-zinc-400'}`}>
                         {filterCounts[tab.id]}
@@ -789,12 +824,12 @@
 
             {/* Main Content */}
             <main className="flex-1 overflow-y-auto px-5 md:px-8 pt-5 md:pt-8 pb-28 md:pb-10 grid grid-cols-1 md:grid-cols-12 gap-7 md:gap-8 items-start">
-              {/* Left Column on Desktop: FOCUS NOW (MAX 3) */}
+              {/* Left Column on Desktop: FOCUS NOW — WORK / PERSONAL (MAX 3) */}
               <section aria-labelledby="focus-now-heading" className="md:col-span-6 lg:col-span-6 md:sticky md:top-0">
                 <div className="flex flex-wrap items-center justify-between gap-2 mb-3.5">
                   <div className="flex items-center gap-2">
                     <h2 id="focus-now-heading" className="text-[11px] font-extrabold uppercase tracking-[0.09em] text-zinc-400">
-                      Focus Now (Max 3)
+                      Focus Now — {filter} (Max 3)
                     </h2>
                     {visibleActive.length > 1 && (
                       <span className="text-[10px] font-semibold text-zinc-600">• Hold to reorder</span>
@@ -923,26 +958,19 @@
                     );
                   })}
 
-                  {hiddenActiveCount > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => handleFilterChange('All')}
-                      className="w-full flex items-center justify-between px-4 py-3 rounded-2xl bg-amber-500/10 border border-amber-400/25 text-xs font-bold text-amber-200 hover:bg-amber-500/15 transition-colors cursor-pointer"
-                    >
-                      <span>{hiddenActiveCount} {hiddenActiveCount === 1 ? 'spot' : 'spots'} used by {filter === 'Work' ? 'Personal' : 'Work'}</span>
-                      <span className="text-rose-400">Show All →</span>
-                    </button>
-                  )}
-
                   {Array.from({ length: openSlotsCount }).map((_, idx) => {
                     const slotNumber = activeCount + idx + 1;
                     return (
                       <div key={`open-slot-${slotNumber}`} className="rounded-3xl border-2 border-dashed border-zinc-800 bg-zinc-900/40 px-4 md:px-5 py-4 md:py-5 flex items-center gap-3">
-                        <span className="w-7 h-7 rounded-full bg-amber-500/15 text-amber-300 border border-amber-400/25 flex items-center justify-center text-xs font-extrabold tabular-nums">
+                        <span className={`w-7 h-7 rounded-full border flex items-center justify-center text-xs font-extrabold tabular-nums ${
+                          isWorkTab
+                            ? 'bg-rose-500/15 text-rose-300 border-rose-400/25'
+                            : 'bg-emerald-500/15 text-emerald-300 border-emerald-400/25'
+                        }`}>
                           {slotNumber}
                         </span>
                         <span className="text-xs font-semibold text-zinc-400">
-                          Open Focus Spot — Pick one from Up Next
+                          Open {filter} Focus Spot — Pick one from Up Next
                         </span>
                       </div>
                     );
@@ -956,7 +984,7 @@
                   <div className="flex items-center justify-between mb-3.5">
                     <div className="flex items-center gap-2">
                       <h2 id="up-next-heading" className="text-[11px] font-extrabold uppercase tracking-[0.09em] text-zinc-400">
-                        Up Next ({visibleQueue.length})
+                        Up Next — {filter} ({visibleQueue.length})
                       </h2>
                       {visibleQueue.length > 1 && (
                         <span className="text-[10px] font-semibold text-zinc-600">• Hold to reorder</span>
@@ -967,7 +995,8 @@
                   {visibleQueue.length === 0 ? (
                     <div className="rounded-3xl bg-[#161922] border border-zinc-800/80 py-8 px-5 text-center">
                       <Icon.Sparkles className="w-5 h-5 text-amber-400 mx-auto mb-2" />
-                      <p className="text-sm font-bold text-zinc-200">{filter === 'All' ? 'Nothing waiting in line' : `No ${filter} tasks queued`}</p>
+                      <p className="text-sm font-bold text-zinc-200">No {filter} tasks queued</p>
+                      <p className="text-xs text-zinc-500 mt-0.5">Tap "+ Add {filter} Task" whenever an idea pops up.</p>
                     </div>
                   ) : (
                     <ul className="space-y-2.5">
@@ -1044,7 +1073,7 @@
                               {isLocked ? (
                                 <button
                                   type="button"
-                                  onClick={triggerLockedFeedback}
+                                  onClick={() => triggerLockedFeedback(filter)}
                                   aria-disabled="true"
                                   className="min-h-[34px] px-2.5 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-500 text-xs font-bold inline-flex items-center gap-1 cursor-not-allowed hover:bg-amber-500/15 hover:text-amber-300 hover:border-amber-400/30 transition-colors"
                                 >
@@ -1091,7 +1120,7 @@
                     >
                       <span className="inline-flex items-center gap-2">
                         <Icon.Pause className="w-3.5 h-3.5" />
-                        <span>Waiting On / Parked ({visibleWaiting.length})</span>
+                        <span>Waiting On / Parked — {filter} ({visibleWaiting.length})</span>
                       </span>
                       {isWaitingOpen ? <Icon.ChevronUp className="w-3.5 h-3.5" /> : <Icon.ChevronDown className="w-3.5 h-3.5" />}
                     </button>
@@ -1139,14 +1168,14 @@
                     onClick={() => setIsCompletedOpen((prev) => !prev)}
                     className="min-h-[38px] inline-flex items-center justify-center gap-2 px-4 py-1.5 rounded-full bg-[#161922] border border-zinc-800 hover:border-zinc-700 text-xs font-bold text-zinc-400 hover:text-zinc-200 transition-all cursor-pointer"
                   >
-                    <span>Completed ({visibleCompleted.length})</span>
+                    <span>Completed {filter} ({visibleCompleted.length})</span>
                     {isCompletedOpen ? <Icon.ChevronUp className="w-3.5 h-3.5 text-zinc-500" /> : <Icon.ChevronDown className="w-3.5 h-3.5 text-zinc-500" />}
                   </button>
 
                   {isCompletedOpen && (
                     <div className="w-full mt-3 bg-[#161922] rounded-3xl border border-zinc-800/90 p-4 space-y-3">
                       {visibleCompleted.length === 0 ? (
-                        <p className="text-xs text-zinc-500 text-center py-2">No completed tasks yet.</p>
+                        <p className="text-xs text-zinc-500 text-center py-2">No completed {filter} tasks yet.</p>
                       ) : (
                         <ul className="divide-y divide-zinc-800/80">
                           {visibleCompleted.map((task) => (
@@ -1191,10 +1220,14 @@
               <button
                 type="button"
                 onClick={openAddSheet}
-                className="w-full min-h-[52px] rounded-full bg-gradient-to-r from-rose-500 via-orange-500 to-amber-500 hover:from-rose-600 hover:via-orange-600 hover:to-amber-600 active:scale-[0.99] text-white font-extrabold text-sm shadow-[0_10px_28px_-6px_rgba(244,63,94,0.45)] inline-flex items-center justify-center gap-2 transition-all cursor-pointer"
+                className={`w-full min-h-[52px] rounded-full active:scale-[0.99] text-white font-extrabold text-sm inline-flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                  isWorkTab
+                    ? 'bg-gradient-to-r from-rose-500 via-orange-500 to-amber-500 hover:from-rose-600 hover:via-orange-600 hover:to-amber-600 shadow-[0_10px_28px_-6px_rgba(244,63,94,0.45)]'
+                    : 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 shadow-[0_10px_28px_-6px_rgba(16,185,129,0.45)]'
+                }`}
               >
                 <Icon.Plus className="w-5 h-5" />
-                <span>Add Task</span>
+                <span>Add {filter} Task</span>
               </button>
             </div>
 
@@ -1205,7 +1238,7 @@
                   <div className="flex md:hidden justify-center" aria-hidden="true"><div className="w-10 h-1.5 rounded-full bg-zinc-700" /></div>
 
                   <div className="flex items-center justify-between">
-                    <h2 id="new-task-sheet-title" className="text-lg font-extrabold tracking-tight text-white">New Task</h2>
+                    <h2 id="new-task-sheet-title" className="text-lg font-extrabold tracking-tight text-white">New {newCategory} Task</h2>
                     <button type="button" onClick={() => setIsSheetOpen(false)} aria-label="Close modal" className="w-8 h-8 rounded-full bg-zinc-800 text-zinc-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer">
                       <Icon.X className="w-4 h-4" />
                     </button>
@@ -1220,7 +1253,7 @@
                         type="text"
                         value={newTitle}
                         onChange={(e) => setNewTitle(e.target.value)}
-                        placeholder="What do you want to tackle?"
+                        placeholder={`What ${newCategory.toLowerCase()} task do you want to tackle?`}
                         className="w-full min-h-[50px] px-4 rounded-2xl bg-[#0F1117] border border-zinc-800 text-sm font-bold text-white placeholder:text-zinc-500 focus:outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 transition-all"
                       />
                     </div>
@@ -1235,7 +1268,7 @@
                         }`}
                       >
                         <Icon.Briefcase className="w-4 h-4" />
-                        <span>Work</span>
+                        <span>Work ({workActive.length}/3)</span>
                       </button>
 
                       <button
@@ -1247,7 +1280,7 @@
                         }`}
                       >
                         <Icon.Sparkles className="w-4 h-4" />
-                        <span>Personal</span>
+                        <span>Personal ({personalActive.length}/3)</span>
                       </button>
                     </div>
 
@@ -1258,16 +1291,16 @@
 
                       <button
                         type="button"
-                        disabled={isLocked}
+                        disabled={isModalCategoryLocked}
                         onClick={() => handleAddTask(null, 'active')}
                         className={`min-h-[48px] rounded-full text-xs font-extrabold inline-flex items-center justify-center gap-1.5 transition-all ${
-                          isLocked ? 'bg-zinc-800/80 text-zinc-500 cursor-not-allowed' : 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-400/30 cursor-pointer'
+                          isModalCategoryLocked ? 'bg-zinc-800/80 text-zinc-500 cursor-not-allowed' : 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-400/30 cursor-pointer'
                         }`}
                       >
-                        {isLocked ? (
+                        {isModalCategoryLocked ? (
                           <>
                             <Icon.Lock className="w-3.5 h-3.5" />
-                            <span>Full (3/3)</span>
+                            <span>{newCategory} Full (3/3)</span>
                           </>
                         ) : (
                           <span>Focus Now</span>
